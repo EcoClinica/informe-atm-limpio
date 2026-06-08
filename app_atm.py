@@ -4,15 +4,13 @@ import datetime
 import io
 import re
 
-# Intentamos importar python-docx. Si no está, avisamos amablemente.
 try:
     from docx import Document
     from docx.shared import Inches, Pt, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
 except ImportError:
-    st.error("Por favor, asegúrate de tener 'python-docx' en tu archivo requirements.txt")
+    st.error("Asegúrate de tener 'python-docx' en tu archivo requirements.txt")
 
-# Configuración de pantalla ancha (Ideal para ver las 2 ATM en paralelo en el iPad)
 st.set_page_config(page_title="Generador de Informes ATM", layout="wide")
 
 # Estilos estéticos para la pantalla del iPad
@@ -29,7 +27,7 @@ st.markdown("""
 st.markdown("<h1 class='titulo-principal'>Informe Ecográfico ATM</h1>", unsafe_allow_html=True)
 st.markdown("<p class='sub-titulo'>Generador Profesional Automatizado con python-docx</p>", unsafe_allow_html=True)
 
-# --- RECEPTOR DE DICTADO POR VOZ (COMPONENTE SEGURO) ---
+# --- RECEPTOR DE DICTADO POR VOZ OPTIMIZADO PARA IPAD ---
 def componente_microfono_visible(lado_id):
     js_code = f"""
     <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 4px;">
@@ -46,7 +44,7 @@ def componente_microfono_visible(lado_id):
     let activo_{lado_id} = false;
 
     function enviarAStreamlit(textoNumeros) {{
-        if (window.Streamlit) {{ Streamlit.setComponentValue(textoNumeros); }}
+        if (window.Streamlit) {{ window.Streamlit.setComponentValue(textoNumeros); }}
     }}
 
     function conmutarMicro(lado) {{
@@ -60,26 +58,29 @@ def componente_microfono_visible(lado_id):
             return;
         }}
 
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {{
-            status.innerText = "No compatible.";
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {{
+            status.innerText = "Dictado no soportado.";
             return;
         }}
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition_{lado_id} = new SpeechRecognition();
         recognition_{lado_id}.lang = 'es-ES';
         recognition_{lado_id}.interimResults = false;
+        recognition_{lado_id}.maxAlternatives = 1;
 
         activo_{lado_id} = true;
         btn.innerText = "🛑 Parar";
         btn.className = "btn-voz btn-rojo";
-        status.innerText = "🎙️ Escuchando...";
+        status.innerText = "🎙️ Escuchando... Di los 3 números seguido";
+        status.style.color = "#0284C7";
 
         recognition_{lado_id}.start();
 
         recognition_{lado_id}.onresult = function(event) {{
-            const texto = event.results[0][0].transcript;
-            const matches = texto.replace(/,/g, '.').match(/[0-9]+(\\.[0-9]+)?/g);
+            let texto = event.results[0][0].transcript;
+            texto = texto.replace(/ con /g, '.').replace(/ y /g, ' ').replace(/,/g, '.');
+            const matches = texto.match(/[0-9]+(\\.[0-9]+)?/g);
             
             if (matches && matches.length >= 3) {{
                 const resultadoCadena = matches[0] + " , " + matches[1] + " , " + matches[2];
@@ -88,13 +89,23 @@ def componente_microfono_visible(lado_id):
                 status.style.color = "#16A34A";
                 enviarAStreamlit(resultadoCadena);
             }} else {{
-                status.innerText = "❌ Reintenta.";
+                status.innerText = "❌ Reintenta (di 3 números).";
                 status.style.color = "#DC2626";
             }}
         }};
 
-        recognition_{lado_id}.onerror = function() {{ resetearBoton(lado, "Reintenta."); }};
-        recognition_{lado_id}.onend = function() {{ resetearBoton(lado, status.innerText); }};
+        recognition_{lado_id}.onerror = function(e) {{ 
+            resetearBoton(lado, "❌ Reintenta."); 
+        }};
+        
+        recognition_{lado_id}.onend = function() {{ 
+            activo_{lado_id} = false;
+            if (status.innerText.includes("Escuchando")) {{
+                resetearBoton(lado, "❌ Reintenta.");
+            }} else {{
+                resetearBoton(lado, status.innerText);
+            }}
+        }};
     }}
 
     function resetearBoton(lado, msg) {{
@@ -103,7 +114,10 @@ def componente_microfono_visible(lado_id):
         const status = document.getElementById('status_' + lado);
         btn.innerText = "🎙️ Dictar 3 Medidas";
         btn.className = "btn-voz btn-azul";
-        if(msg) status.innerText = msg;
+        if(msg) {{
+            status.innerText = msg;
+            if (!msg.includes("✓")) status.style.color = "#DC2626";
+        }}
     }}
     </script>
     <style>
@@ -124,29 +138,36 @@ def procesar_medidas_sistema(texto_dictado, manual_as, manual_lat, manual_pi):
 
 def calcular_posicion_condilo(ant_sup_txt, post_inf_txt):
     try:
-        if not ant_sup_txt or not post_inf_txt: return "0.00"
+        if not ant_sup_txt or not post_inf_txt or ant_sup_txt == "" or post_inf_txt == "": 
+            return "0.00"
         as_val = float(str(ant_sup_txt).replace(',', '.'))
         pi_val = float(str(post_inf_txt).replace(',', '.'))
         if (pi_val + as_val) == 0: return "0.00"
+        
         resultado = ((pi_val - as_val) / (pi_val + as_val)) * 100
-        return f"{'+' if resultado > 0 else ''}{resultado:.2f}"
+        
+        if resultado > 0:
+            return f"+{resultado:.2f}"
+        elif resultado < 0:
+            return f"{resultado:.2f}"
+        else:
+            return "0.00"
     except ValueError:
         return "0.00"
 
-# --- RECOLECCIÓN DE DATOS EN LA INTERFAZ WEB ---
+# --- INTERFAZ WEB LIMPIA (VALORES TOTALMENTE EN BLANCO) ---
 st.subheader("📋 Datos del Paciente")
 cp1, cp2, cp3 = st.columns(3)
 with cp1:
     nombres = st.text_input("Nombre del Paciente:", value="")
     apellidos = st.text_input("Apellidos:", value="")
 with cp2:
-    edad = st.text_input("Edad:")
+    edad = st.text_input("Edad:", value="")
     fecha = st.date_input("Fecha del estudio:", datetime.date.today(), format="DD/MM/YYYY")
 with cp3:
-    motivo = st.text_input("Motivo de consulta:", value="Dolor ATM bilateral.")
+    motivo = st.text_input("Motivo de consulta:", value="")
     derivado = st.text_input("Derivado por (Dr/a):", value="")
 
-# Opciones de los menús desplegables rápidos
 opts_morfologia = ["aplanado, irregular", "irregular, estrecho, con cresta lateral", "redondeado, regular", "en pico de pájaro"]
 opts_espacio = ["con osteofitos. Engrosamiento sinovial superior", "con osteofitos", "libre, sin hallazgos patológicos"]
 opts_derrame = ["Presencia de derrame articular.", "Sin presencia de derrame articular."]
@@ -158,26 +179,25 @@ opts_abierta = ["desplazamiento anterior cubre la porción anterior de la cabeza
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- INTERFAZ VISUAL EN PARALELO (DERECHA / IZQUIERDA) ---
 col_der, col_izq = st.columns(2, gap="large")
 
-# LADO DERECHO
+# LADO DERECHO (VACÍO POR DEFECTO)
 with col_der:
     st.markdown("<div class='titulo-lado'>Estudio ATM Derecha</div>", unsafe_allow_html=True)
     morf_der = st.selectbox("Morfología cabeza condilar (D):", opts_morfologia, index=0, key="w_m_der")
     esp_der = st.selectbox("Espacio articular (D):", opts_espacio, index=0, key="w_e_der")
     derrame_der = st.selectbox("Derrame articular (D):", opts_derrame, index=0, key="w_d_der")
     
-    st.markdown("<div class='sub-bloque'>Medidas Cóndilo Derecho:</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-bloque'>Medidas Cóndilo Derecho (mm):</div>", unsafe_allow_html=True)
     dictado_der = componente_microfono_visible("der")
     md1, md2, md3 = st.columns(3)
-    with md1: manual_as_der = st.text_input("Ant-Sup (D)", value="1.98", key="w_as_der")
-    with md2: manual_lat_der = st.text_input("Lateral (D)", value="1.65", key="w_la_der")
-    with md3: manual_pi_der = st.text_input("Post-Inf (D)", value="2.84", key="w_pi_der")
+    with md1: manual_as_der = st.text_input("Ant-Sup (D)", value="", key="w_as_der")
+    with md2: manual_lat_der = st.text_input("Lateral (D)", value="", key="w_la_der")
+    with md3: manual_pi_der = st.text_input("Post-Inf (D)", value="", key="w_pi_der")
     
     med_as_der, med_lat_der, med_pi_der = procesar_medidas_sistema(dictado_der, manual_as_der, manual_lat_der, manual_pi_der)
     res_der = calcular_posicion_condilo(med_as_der, med_pi_der)
-    st.markdown(f"<div class='resultado-calculo'>🧮 Índice de Pullinger (D): {res_der}%</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='resultado-calculo'>🧮 Índice de Pullinger (D): {res_der}</div>", unsafe_allow_html=True)
     
     st.markdown("<div class='sub-bloque'>Disco Articular y Dinámica (D):</div>", unsafe_allow_html=True)
     eco_der = st.selectbox("Ecoestructura (D):", opts_ecoestructura, index=0, key="w_ec_der")
@@ -186,23 +206,23 @@ with col_der:
     c_der = st.selectbox("Boca cerrada (D):", opts_cerrada, index=0, key="w_c_der")
     a_der = st.selectbox("Boca abierta (D):", opts_abierta, index=0, key="w_a_der")
 
-# LADO IZQUIERDO
+# LADO IZQUIERDO (VACÍO POR DEFECTO)
 with col_izq:
     st.markdown("<div class='titulo-lado'>Estudio ATM Izquierda</div>", unsafe_allow_html=True)
     morf_izq = st.selectbox("Morfología cabeza condilar (I):", opts_morfologia, index=1, key="w_m_izq")
     esp_izq = st.selectbox("Espacio articular (I):", opts_espacio, index=1, key="w_e_izq")
     derrame_izq = st.selectbox("Derrame articular (I):", opts_derrame, index=0, key="w_d_izq")
     
-    st.markdown("<div class='sub-bloque'>Medidas Cóndilo Izquierdo:</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-bloque'>Medidas Cóndilo Izquierdo (mm):</div>", unsafe_allow_html=True)
     dictado_izq = componente_microfono_visible("izq")
     mi1, mi2, mi3 = st.columns(3)
-    with mi1: manual_as_izq = st.text_input("Ant-Sup (I)", value="2.37", key="w_as_izq")
-    with mi2: manual_lat_izq = st.text_input("Lateral (I)", value="1.14", key="w_la_izq")
-    with mi3: manual_pi_izq = st.text_input("Post-Inf (I)", value="2.92", key="w_pi_izq")
+    with mi1: manual_as_izq = st.text_input("Ant-Sup (I)", value="", key="w_as_izq")
+    with mi2: manual_lat_izq = st.text_input("Lateral (I)", value="", key="w_la_izq")
+    with mi3: manual_pi_izq = st.text_input("Post-Inf (I)", value="", key="w_pi_izq")
     
     med_as_izq, med_lat_izq, med_pi_izq = procesar_medidas_sistema(dictado_izq, manual_as_izq, manual_lat_izq, manual_pi_izq)
     res_izq = calcular_posicion_condilo(med_as_izq, med_pi_izq)
-    st.markdown(f"<div class='resultado-calculo'>🧮 Índice de Pullinger (I): {res_izq}%</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='resultado-calculo'>🧮 Índice de Pullinger (I): {res_izq}</div>", unsafe_allow_html=True)
     
     st.markdown("<div class='sub-bloque'>Disco Articular y Dinámica (I):</div>", unsafe_allow_html=True)
     eco_izq = st.selectbox("Ecoestructura (I):", opts_ecoestructura, index=0, key="w_ec_izq")
@@ -212,48 +232,40 @@ with col_izq:
     a_izq = st.selectbox("Boca abierta (I):", opts_abierta, index=0, key="w_a_izq")
 
 st.markdown("<br><hr>", unsafe_allow_html=True)
-conclusion = st.text_area("📝 CONCLUSIÓN DEL INFORME:", value="Signos ecográficos descritos compatibles con patología articular bilateral.")
+conclusion = st.text_area("📝 CONCLUSIÓN DEL INFORME:", value="")
 
-# --- PASO 1 Y 2 UNIFICADOS: EL MOTOR QUE DISEÑA EL WORD INTERNAMENTE ---
 st.subheader("💾 Compilar y Descargar Informe Médico")
 
 if st.button("🚀 COMPILAR INFORME EN FORMATO PROFESIONAL (.DOCX)"):
     try:
-        # Creamos el documento en blanco
         doc = Document()
-        
-        # Configuración de márgenes
         for section in doc.sections:
             section.top_margin = Inches(1)
             section.bottom_margin = Inches(1)
             section.left_margin = Inches(1)
             section.right_margin = Inches(1)
 
-        # Configuración de Estilo Base (Fuente Arial, Tamaño 11)
         style = doc.styles['Normal']
         font = style.font
         font.name = 'Arial'
         font.size = Pt(11)
-        font.color.rgb = RGBColor(0x33, 0x41, 0x55) # Gris oscuro elegante
+        font.color.rgb = RGBColor(0x33, 0x41, 0x55)
 
-        # --- TITULO PRINCIPAL DEL WORD ---
         p_tit = doc.add_paragraph()
         p_tit.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run_tit = p_tit.add_run("INFORME ECOGRÁFICO DE LA ARTICULACIÓN TEMPOROMANDIBULAR (ATM)")
         run_tit.font.size = Pt(14)
         run_tit.font.bold = True
-        run_tit.font.color.rgb = RGBColor(0x1E, 0x3A, 0x8A) # Azul Marino Médico
+        run_tit.font.color.rgb = RGBColor(0x1E, 0x3A, 0x8A)
 
-        # Subtítulo fijo institucional
         p_sub = doc.add_paragraph()
         p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run_sub = p_sub.add_run("Protocolo de adquisición ecográfica en posición de boca abierta y cerrada (ambas)")
         run_sub.font.size = Pt(10)
         run_sub.font.italic = True
         
-        doc.add_paragraph("-" * 80) # Separador visual
+        doc.add_paragraph("-" * 80)
 
-        # --- BLOQUE: DATOS GENERALES DEL PACIENTE ---
         p_dat = doc.add_paragraph()
         p_dat.add_run("Paciente: ").bold = True
         p_dat.add_run(f"{nombres} {apellidos}         ")
@@ -268,12 +280,12 @@ if st.button("🚀 COMPILAR INFORME EN FORMATO PROFESIONAL (.DOCX)"):
 
         doc.add_paragraph("-" * 80)
 
-        # --- SECCIÓN: ARTICULACIÓN DERECHA ---
+        # SECCIÓN DERECHA
         h_der = doc.add_paragraph()
         r_h_der = h_der.add_run("ESTUDIO ARTICULACIÓN TEMPOROMANDIBULAR DERECHA")
         r_h_der.font.bold = True
         r_h_der.font.size = Pt(12)
-        r_h_der.font.color.rgb = RGBColor(0x02, 0x84, 0xC7) # Azul Celeste Clínico
+        r_h_der.font.color.rgb = RGBColor(0x02, 0x84, 0xC7)
 
         p_body_der = doc.add_paragraph()
         p_body_der.add_run("Cóndilo mandibular derecho: ").bold = True
@@ -281,9 +293,8 @@ if st.button("🚀 COMPILAR INFORME EN FORMATO PROFESIONAL (.DOCX)"):
         p_body_der.add_run("Espacio articular: ").bold = True
         p_body_der.add_run(f"{esp_der}.\n")
         
-        # Línea de medidas destacada
-        p_body_der.add_run(f"Medidas anterosuperior: {med_as_der} mm. Lateral: {med_lat_der} mm. Posteroinferior: {med_pi_der} mm.\n").bold = True
-        p_body_der.add_run(f"{derrame_der} (Índice Condilar de Pullinger: {res_der}%)\n")
+        p_body_der.add_run(f"Medidas anterosuperior: {med_as_der if med_as_der else '---'} mm. Lateral: {med_lat_der if med_lat_der else '---'} mm. Posteroinferior: {med_pi_der if med_pi_der else '---'} mm.\n").bold = True
+        p_body_der.add_run(f"{derrame_der} (Índice Condilar de Pullinger: {res_der})\n")
         
         p_body_der.add_run("Disco articular: ").bold = True
         p_body_der.add_run(f"{eco_der} Situación en {hora_der}.\n")
@@ -294,9 +305,9 @@ if st.button("🚀 COMPILAR INFORME EN FORMATO PROFESIONAL (.DOCX)"):
         doc.add_paragraph(f"Boca cerrada: en {hora_der} {c_der}", style='List Bullet')
         doc.add_paragraph(f"Boca abierta: {a_der}", style='List Bullet')
 
-        doc.add_paragraph(" ") # Espacio de separación
+        doc.add_paragraph(" ")
 
-        # --- SECCIÓN: ARTICULACIÓN IZQUIERDA ---
+        # SECCIÓN IZQUIERDA
         h_izq = doc.add_paragraph()
         r_h_izq = h_izq.add_run("ESTUDIO ARTICULACIÓN TEMPOROMANDIBULAR IZQUIERDA")
         r_h_izq.font.bold = True
@@ -309,9 +320,8 @@ if st.button("🚀 COMPILAR INFORME EN FORMATO PROFESIONAL (.DOCX)"):
         p_body_izq.add_run("Espacio articular: ").bold = True
         p_body_izq.add_run(f"{esp_izq}.\n")
         
-        # Línea de medidas destacada
-        p_body_izq.add_run(f"Medidas Anterosuperior: {med_as_izq} mm. Lateral: {med_lat_izq} mm. Posteroinferior: {med_pi_izq} mm.\n").bold = True
-        p_body_izq.add_run(f"{derrame_izq} (Índice Condilar de Pullinger: {res_izq}%)\n")
+        p_body_izq.add_run(f"Medidas Anterosuperior: {med_as_izq if med_as_izq else '---'} mm. Lateral: {med_lat_izq if med_lat_izq else '---'} mm. Posteroinferior: {med_pi_izq if med_pi_izq else '---'} mm.\n").bold = True
+        p_body_izq.add_run(f"{derrame_izq} (Índice Condilar de Pullinger: {res_izq})\n")
         
         p_body_izq.add_run("Disco articular: ").bold = True
         p_body_izq.add_run(f"{eco_izq} Situado en {hora_izq}.\n")
@@ -324,14 +334,12 @@ if st.button("🚀 COMPILAR INFORME EN FORMATO PROFESIONAL (.DOCX)"):
 
         doc.add_paragraph("-" * 80)
 
-        # --- SECCIÓN: CONCLUSIÓN FINAL ---
         p_con = doc.add_paragraph()
         r_con_title = p_con.add_run("CONCLUSIÓN: ")
         r_con_title.bold = True
         r_con_title.font.color.rgb = RGBColor(0x1E, 0x3A, 0x8A)
         p_con.add_run(conclusion)
 
-        # Guardado en memoria intermedia para descarga inmediata
         bio = io.BytesIO()
         doc.save(bio)
         bio.seek(0)
@@ -344,7 +352,7 @@ if st.button("🚀 COMPILAR INFORME EN FORMATO PROFESIONAL (.DOCX)"):
             file_name=nombre_limpio,
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-        st.success("¡Documento Word generado con éxito desde el código! Listo para descargar.")
+        st.success("¡Documento Word generado con éxito!")
         
     except Exception as e:
-        st.error(f"Error crítico de formateo en el motor de python-docx: {e}")
+        st.error(f"Error de formato: {e}")
