@@ -1,23 +1,8 @@
-¡Entendido perfectamente! Vamos a pulir todos esos detalles para que el documento de Word quede impecable y la aplicación responda tal como lo necesitas en la práctica clínica.
-
-Aquí tienes el análisis rápido de las correcciones aplicadas:
-
-Desplegables multi-selección: Cambiados a st.multiselect para que puedas marcar varias opciones a la vez (se unirán con comas en el Word).
-
-Limpieza por defecto: Si dejas un campo vacío en la app, en el Word saldrá completamente en blanco (ya no se arrastrarán los textos internos de la plantilla).
-
-Formato Estricto Arial & Azul: Todo el documento de Word se genera en fuente Arial. Todos los títulos en mayúsculas cambian automáticamente a color azul, y el título principal queda centrado con un salto de línea estético y equilibrado.
-
-📄 Copia todo este código corregido para pages/1_🦷_ATM_Estudio_Dinamico.py:
-Python
 import streamlit as st
 import streamlit.components.v1 as components
-from docxtpl import DocxTemplate
 import datetime
 import io
 import re
-import os
-import docx
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -25,7 +10,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 def generar_plantilla_fiel(ctx_datos):
     doc = Document()
     
-    # Configuración de márgenes
     for section in doc.sections:
         section.top_margin = Inches(0.8)
         section.bottom_margin = Inches(0.8)
@@ -36,7 +20,6 @@ def generar_plantilla_fiel(ctx_datos):
     NEGRO = RGBColor(0, 0, 0)
     GRIS_LINEA = RGBColor(156, 163, 175)
     
-    # 1. Título principal equilibrado en Arial y Azul
     p_titulo = doc.add_paragraph()
     p_titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_titulo.paragraph_format.space_after = Pt(12)
@@ -51,7 +34,6 @@ def generar_plantilla_fiel(ctx_datos):
     r_l1.font.name = 'Arial'
     r_l1.font.color.rgb = GRIS_LINEA
     
-    # 2. Datos del Paciente
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(8)
     
@@ -75,7 +57,6 @@ def generar_plantilla_fiel(ctx_datos):
     r_ldesc.font.name = 'Arial'
     r_ldesc.font.color.rgb = GRIS_LINEA
     
-    # 3. Subtítulo General en Azul y Mayúsculas
     p_estudio = doc.add_paragraph()
     p_estudio.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_est = p_estudio.add_run("ESTUDIO DINÁMICO DE AMBAS ATM")
@@ -84,7 +65,6 @@ def generar_plantilla_fiel(ctx_datos):
     r_est.font.size = Pt(12)
     r_est.font.color.rgb = AZUL_CLINICA
     
-    # Bloques dinámicos de las ATM
     def agregar_bloque_atm(lado_nombre, prefijo):
         p_sub = doc.add_paragraph()
         p_sub.paragraph_format.space_before = Pt(12)
@@ -295,7 +275,6 @@ with col_izq:
 st.markdown("<br>", unsafe_allow_html=True)
 conclusion = st.text_area("📝 CONCLUSIÓN:")
 
-# Unión limpia de las opciones multiselección
 def unir_opciones(lista):
     return ", ".join(lista) if lista else ""
 
@@ -313,7 +292,6 @@ ctx = {
     'conclusion': conclusion
 }
 
-# Botón de descarga dinámico
 word_generado = generar_plantilla_fiel(ctx)
 st.download_button(
     label="🚀 DESCARGAR INFORME EN WORD", 
