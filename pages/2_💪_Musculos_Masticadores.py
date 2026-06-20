@@ -20,6 +20,7 @@ def generar_plantilla_musculos(ctx_datos):
     NEGRO = RGBColor(0, 0, 0)
     GRIS_LINEA = RGBColor(156, 163, 175)
     
+    # Título Principal en Arial
     p_titulo = doc.add_paragraph()
     p_titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_titulo.paragraph_format.space_after = Pt(12)
@@ -34,7 +35,7 @@ def generar_plantilla_musculos(ctx_datos):
     r_l1.font.name = 'Arial'
     r_l1.font.color.rgb = GRIS_LINEA
     
-    # --- TABLA INVISIBLE PARA ALINEACIÓN PERFECTA ---
+    # --- TABLA INVISIBLE PARA DATOS DEL PACIENTE ---
     tabla_datos = doc.add_table(rows=2, cols=2)
     tabla_datos.autofit = False
     tabla_datos.columns[0].width = Inches(4.5)
@@ -63,8 +64,26 @@ def generar_plantilla_musculos(ctx_datos):
     r_mot_val = p_motivo.add_run(ctx_datos.get('motivo', ''))
     r_mot_val.font.name = 'Arial'
     
+    # --- VALORES DE REFERENCIA EN EL WORD ---
+    p_ref = doc.add_paragraph()
+    p_ref.paragraph_format.space_before = Pt(6)
+    r_ref_tit = p_ref.add_run("Valores de Referencia Normales (Espesor promedio):\n")
+    r_ref_tit.bold = True
+    r_ref_tit.font.name = 'Arial'
+    r_ref_tit.font.size = Pt(9.5)
+    r_ref_tit.font.color.rgb = AZUL_CLINICA
+    
+    r_ref_txt = p_ref.add_run(
+        f"· Sexo del Paciente evaluado: {ctx_datos.get('sexo', 'No especificado')}\n"
+        "· Masetero - Varones: Reposo ~10-12 mm / Contracción ~13-15 mm  |  Mujeres: Reposo ~8-10 mm / Contracción ~10-12 mm\n"
+        "· Temporal - Varones: Reposo ~4.5-5.5 mm / Contracción ~6.0-7.0 mm  |  Mujeres: Reposo ~3.8-4.8 mm / Contracción ~5.0-6.0 mm"
+    )
+    r_ref_txt.font.name = 'Arial'
+    r_ref_txt.font.size = Pt(9)
+    r_ref_txt.italic = True
+    
     p_linea_desc = doc.add_paragraph()
-    p_linea_desc.paragraph_format.space_before = Pt(6)
+    p_linea_desc.paragraph_format.space_before = Pt(4)
     p_linea_desc.paragraph_format.space_after = Pt(12)
     r_ldesc = p_linea_desc.add_run("--------------------------------------------------------------------------------")
     r_ldesc.font.name = 'Arial'
@@ -90,30 +109,34 @@ def generar_plantilla_musculos(ctx_datos):
         p_campos = doc.add_paragraph()
         p_campos.paragraph_format.space_after = Pt(4)
         
-        def add_campo(parrafo, etiqueta, valor, espacio="   "):
+        # 1. MEDIDAS PRIMERO (Cambio solicitado)
+        r_tit_med = p_campos.add_run("Espesor y Dinámica Muscular:\n")
+        r_tit_med.bold = True
+        r_tit_med.font.name = 'Arial'
+        
+        r_d_tit = p_campos.add_run("· Lado Derecho: ")
+        r_d_tit.bold = True
+        r_d_tit.font.name = 'Arial'
+        r_d_val = p_campos.add_run(f"Reposo: {ctx_datos.get(f'rep_d_{prefijo}', '')} mm | Contracción: {ctx_datos.get(f'con_d_{prefijo}', '')} mm | Engrosamiento: {ctx_datos.get(f'pct_d_{prefijo}', '')}\n")
+        r_d_val.font.name = 'Arial'
+        
+        r_i_tit = p_campos.add_run("· Lado Izquierdo: ")
+        r_i_tit.bold = True
+        r_i_tit.font.name = 'Arial'
+        r_i_val = p_campos.add_run(f"Reposo: {ctx_datos.get(f'rep_i_{prefijo}', '')} mm | Contracción: {ctx_datos.get(f'con_i_{prefijo}', '')} mm | Engrosamiento: {ctx_datos.get(f'pct_i_{prefijo}', '')}\n\n")
+        r_i_val.font.name = 'Arial'
+        
+        # 2. ECOESTRUCTURA, SIMETRÍA Y HALLAZGOS DESPUÉS
+        def add_campo_linea(parrafo, etiqueta, valor):
             r_etiq = parrafo.add_run(etiqueta)
             r_etiq.bold = True
             r_etiq.font.name = 'Arial'
-            r_val = parrafo.add_run(f"{valor}{espacio}")
+            r_val = parrafo.add_run(f"{valor}\n")
             r_val.font.name = 'Arial'
             
-        add_campo(p_campos, "Ecoestructura general: ", ctx_datos.get(f'eco_{prefijo}', ''), "\n")
-        add_campo(p_campos, "Simetría comparativa: ", ctx_datos.get(f'simetria_{prefijo}', ''), "\n")
-        add_campo(p_campos, "Hallazgos / Fasciculaciones: ", ctx_datos.get(f'hallazgos_{prefijo}', ''), "\n\n")
-        
-        # Subsección interna de medidas
-        r_tit_med = p_campos.add_run("Espesor y Dinámica del Músculo:\n")
-        r_tit_med.bold = True
-        
-        # Lado Derecho
-        r_d_tit = p_campos.add_run("· Lado Derecho: ")
-        r_d_tit.bold = True
-        p_campos.add_run(f"Reposo: {ctx_datos.get(f'rep_d_{prefijo}', '')} mm | Contracción: {ctx_datos.get(f'con_d_{prefijo}', '')} mm | Engrosamiento: {ctx_datos.get(f'pct_d_{prefijo}', '')}\n")
-        
-        # Lado Izquierdo
-        r_i_tit = p_campos.add_run("· Lado Izquierdo: ")
-        r_i_tit.bold = True
-        p_campos.add_run(f"Reposo: {ctx_datos.get(f'rep_i_{prefijo}', '')} mm | Contracción: {ctx_datos.get(f'con_i_{prefijo}', '')} mm | Engrosamiento: {ctx_datos.get(f'pct_i_{prefijo}', '')}")
+        add_campo_linea(p_campos, "Ecoestructura general: ", ctx_datos.get(f'eco_{prefijo}', ''))
+        add_campo_linea(p_campos, "Simetría comparativa: ", ctx_datos.get(f'simetria_{prefijo}', ''))
+        add_campo_linea(p_campos, "Hallazgos / Fasciculaciones: ", ctx_datos.get(f'hallazgos_{prefijo}', ''))
 
     agregar_bloque_musculo("Masetero", "mas")
     agregar_bloque_musculo("Temporal", "tem")
@@ -142,6 +165,7 @@ st.markdown("""
     .sub-seccion { color: #0284C7; border-bottom: 2px solid #0284C7; padding-bottom: 5px; margin-bottom: 15px; font-size: 20px; }
     .titulo-medidas { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #1E3A8A !important; }
     .resultado-calculo { background-color: #F0FDF4; padding: 10px; border-radius: 5px; border-left: 4px solid #22C55E; margin-top: 5px; margin-bottom: 10px; font-size: 13px; color: #166534 !important; font-weight: bold; }
+    .tabla-referencia { background-color: #F8FAFC; padding: 12px; border-radius: 6px; border: 1px solid #E2E8F0; margin-bottom: 15px; font-size: 12px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -149,19 +173,31 @@ st.markdown("<h1 class='titulo-principal'>Estudio Ecográfico de los Músculos M
 
 st.subheader("📋 Datos del Paciente")
 with st.container(border=True):
-    cp1, cp2, cp3 = st.columns(3)
+    cp1, cp2, cp3, cp4 = st.columns([2, 1, 1, 2])
     with cp1:
         nombres = st.text_input("Paciente:")
-        edad = st.text_input("Edad:")
     with cp2:
+        edad = st.text_input("Edad:")
+    with cp3:
+        sexo = st.selectbox("Sexo:", ["Seleccionar", "Femenino", "Masculino"])
+    with cp4:
         fecha = st.date_input("Fecha:", datetime.date.today(), format="DD/MM/YYYY")
         derivado = st.text_input("Derivado por:")
-    with cp3:
-        motivo = st.text_input("Motivo de consulta:")
+
+motivo = st.text_input("Motivo de consulta:")
+
+# --- PANEL DE VALORES DE REFERENCIA EN LA APP ---
+st.markdown("""
+<div class='tabla-referencia'>
+    <strong>📊 Valores de Referencia Clínicos (Espesor Normal Promedio):</strong><br>
+    • <strong>Músculo Masetero:</strong> Mujeres: Reposo 8.0 - 10.0 mm / Contracción 10.0 - 12.0 mm | Varones: Reposo 10.0 - 12.0 mm / Contracción 13.0 - 15.0 mm<br>
+    • <strong>Músculo Temporal:</strong> Mujeres: Reposo 3.8 - 4.8 mm / Contracción 5.0 - 6.0 mm | Varones: Reposo 4.5 - 5.5 mm / Contracción 6.0 - 7.0 mm
+</div>
+""", unsafe_allow_html=True)
 
 opts_ecoestructura = ["Normal, patrón fibrilar conservado", "Hiperecoicidad difusa (Fibrosis/Sobrecarga)", "Pérdida del patrón fibrilar", "Zonas de atrofia muscular"]
 opts_simetria = ["Simétrico bilateralmente", "Asimetría por hipertrofia derecha", "Asimetría por hipertrofia izquierda", "Atrofia unilateral"]
-opts_hallazgos = ["Sin hallazgos patológicos relevantes", "Presencia de bandas tensas microrroturas", "Fasciculaciones evidentes en dinámica", "Sialolitiasis en glándula parótida adyacente"]
+opts_hallazgos = ["Sin hallazgos patológicos relevantes", "Presencia de bandas tensas microrroturas", "Fasciculaciones evidente en dinámica", "Sialolitiasis en glándula parótida adyacente"]
 
 col_mas, col_tem = st.columns(2)
 
@@ -183,10 +219,8 @@ def calcular_engrosamiento(reposo, contraccion):
 with col_mas:
     with st.container(border=True):
         st.markdown("<h2 class='sub-seccion'>💪 Músculo Masetero</h2>", unsafe_allow_html=True)
-        eco_mas = st.multiselect("Ecoestructura (Masetero):", opts_ecoestructura, key="eco_m")
-        sim_mas = st.multiselect("Simetría (Masetero):", opts_simetria, key="sim_m")
-        hal_mas = st.multiselect("Hallazgos (Masetero):", opts_hallazgos, key="hal_m")
         
+        # Medidas primero en UI
         st.markdown("<p class='titulo-medidas'>Espesor Lado Derecho (mm):</p>", unsafe_allow_html=True)
         md1, md2 = st.columns(2)
         with md1: rep_d_mas = st.text_input("Reposo (D)", value="", key="rd_mas")
@@ -200,15 +234,17 @@ with col_mas:
         with mi2: con_i_mas = st.text_input("Máx. Contracción (I)", value="", key="ci_mas")
         pct_i_mas = calcular_engrosamiento(rep_i_mas, con_i_mas)
         st.markdown(f"<div class='resultado-calculo'>📈 Engrosamiento Masetero (I): {pct_i_mas}</div>", unsafe_allow_html=True)
+        
+        eco_mas = st.multiselect("Ecoestructura (Masetero):", opts_ecoestructura, key="eco_m")
+        sim_mas = st.multiselect("Simetría (Masetero):", opts_simetria, key="sim_m")
+        hal_mas = st.multiselect("Hallazgos (Masetero):", opts_hallazgos, key="hal_m")
 
 # --- BLOQUE MÚSCULO TEMPORAL ---
 with col_tem:
     with st.container(border=True):
         st.markdown("<h2 class='sub-seccion'>💪 Músculo Temporal</h2>", unsafe_allow_html=True)
-        eco_tem = st.multiselect("Ecoestructura (Temporal):", opts_ecoestructura, key="eco_t")
-        sim_tem = st.multiselect("Simetría (Temporal):", opts_simetria, key="sim_t")
-        hal_tem = st.multiselect("Hallazgos (Temporal):", opts_hallazgos, key="hal_t")
         
+        # Medidas primero en UI
         st.markdown("<p class='titulo-medidas'>Espesor Lado Derecho (mm):</p>", unsafe_allow_html=True)
         td1, td2 = st.columns(2)
         with td1: rep_d_tem = st.text_input("Reposo (D)", value="", key="rd_tem")
@@ -222,6 +258,10 @@ with col_tem:
         with ti2: con_i_tem = st.text_input("Máx. Contracción (I)", value="", key="ci_tem")
         pct_i_tem = calcular_engrosamiento(rep_i_tem, con_i_tem)
         st.markdown(f"<div class='resultado-calculo'>📈 Engrosamiento Temporal (I): {pct_i_tem}</div>", unsafe_allow_html=True)
+        
+        eco_tem = st.multiselect("Ecoestructura (Temporal):", opts_ecoestructura, key="eco_t")
+        sim_tem = st.multiselect("Simetría (Temporal):", opts_simetria, key="sim_t")
+        hal_tem = st.multiselect("Hallazgos (Temporal):", opts_hallazgos, key="hal_t")
 
 st.markdown("<br>", unsafe_allow_html=True)
 conclusion = st.text_area("📝 CONCLUSIÓN GENERAL:")
@@ -231,6 +271,7 @@ def unir_opciones(lista):
 
 ctx = {
     'paciente': nombres, 'edad': edad, 'derivado': derivado, 'fecha': fecha.strftime("%d/%m/%Y"), 'motivo': motivo,
+    'sexo': sexo if sexo != "Seleccionar" else "No especificado",
     
     # Masetero
     'eco_mas': unir_opciones(eco_mas), 'simetria_mas': unir_opciones(sim_mas), 'hallazgos_mas': unir_opciones(hal_mas),
