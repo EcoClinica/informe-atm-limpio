@@ -79,9 +79,11 @@ def generar_plantilla_fiel():
         r.font.color.rgb = AZUL_CLARO
         
         p_campos = doc.add_paragraph()
-        campos = [("Cóndilo mandibular: ", f"{{{{ condilo_{prefijo} }}}}\n"), 
-                  ("Espacio articular: ", f"{{{{ espacio_{prefijo} }}}}\n"), 
-                  ("Derrame articular: ", f"{{{{ derrame_{prefijo} }}}}\n")]
+        campos = [
+            ("Cóndilo mandibular: ", f"{{{{ condilo_{prefijo} }}}}\n"), 
+            ("Espacio articular: ", f"{{{{ espacio_{prefijo} }}}}\n"), 
+            ("Derrame articular: ", f"{{{{ derrame_{prefijo} }}}}\n")
+        ]
         for l, v in campos:
             p_campos.add_run(l).bold = True
             p_campos.add_run(v).font.name = 'Arial'
@@ -133,8 +135,10 @@ def generar_plantilla_fiel():
     return bio
 
 try:
-    with open("plantilla_atm.docx", "wb") as f: f.write(generar_plantilla_fiel().getbuffer())
-except: pass
+    with open("plantilla_atm.docx", "wb") as f: 
+        f.write(generar_plantilla_fiel().getbuffer())
+except: 
+    pass
 
 st.set_page_config(page_title="Informe Ecográfico ATM", layout="wide", page_icon="🎙️")
 
@@ -217,19 +221,21 @@ with col_der:
         
         st.markdown("<p class='titulo-medidas'>Medidas condilares (mm):</p>", unsafe_allow_html=True)
         r_md = componente_microfono_visible("der")
-        if r_md: st.session_state.dictado_der = r_md
+        if r_md: 
+            st.session_state.dictado_der = r_md
         
         m1, m2, m3 = st.columns(3)
         with m1: ma_d = st.text_input("Anterior (D)", key="ma_d")
         with m2: ml_d = st.text_input("Lateral (D)", key="ml_d")
         with m3: mp_d = st.text_input("Posterior (D)", key="mp_d")
         
-       def proc(d, a, l, p):
-            # Convertimos "d" a texto de forma segura para evitar el TypeError
+        def proc(d, a, l, p):
             texto_dictado = str(d) if d is not None else ""
             if texto_dictado and len(re.findall(r"[0-9]+", texto_dictado)) >= 3: 
                 return re.findall(r"[0-9.]+", texto_dictado)[:3]
             return a, l, p
+            
+        v1, v2, v3 = proc(st.session_state.dictado_der, ma_d, ml_d, mp_d)
         
         def calc(a, p):
             try:
@@ -256,7 +262,8 @@ with col_izq:
         
         st.markdown("<p class='titulo-medidas'>Medidas condilares (mm):</p>", unsafe_allow_html=True)
         r_mi = componente_microfono_visible("izq")
-        if r_mi: st.session_state.dictado_izq = r_mi
+        if r_mi: 
+            st.session_state.dictado_izq = r_mi
         
         m4, m5, m6 = st.columns(3)
         with m4: ma_i = st.text_input("Anterior (I)", key="ma_i")
