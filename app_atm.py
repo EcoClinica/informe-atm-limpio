@@ -10,7 +10,7 @@ from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-# --- SISTEMA DE AUTO-GENERACIÓN DE PLANTILLA FIEL ---
+# --- SISTEMA DE AUTO-GENERACIÓN DE PLANTILLA CORREGIDA (ARIAL Y AZUL CLARO) ---
 def generar_plantilla_fiel():
     doc = Document()
     
@@ -21,6 +21,11 @@ def generar_plantilla_fiel():
         section.left_margin = Inches(0.8)
         section.right_margin = Inches(0.8)
         
+    # Color Azul Claro para títulos importantes
+    AZUL_CLARO = RGBColor(2, 132, 199)
+    NEGRO = RGBColor(0, 0, 0)
+    GRIS_LINEA = RGBColor(156, 163, 175)
+    
     # Título Principal
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -28,93 +33,207 @@ def generar_plantilla_fiel():
     r.bold = True
     r.font.name = 'Arial'
     r.font.size = Pt(14)
-    r.font.color.rgb = RGBColor(0, 0, 0) # Negro puro como tu original
+    r.font.color.rgb = NEGRO
     
-    # Línea de separación
+    # Línea de separación inicial
     p_linea = doc.add_paragraph()
-    p_linea.add_run("--------------------------------------------------------------------------------")
+    r_l1 = p_linea.add_run("--------------------------------------------------------------------------------")
+    r_l1.font.name = 'Arial'
+    r_l1.font.color.rgb = GRIS_LINEA
     
     # Bloque Datos Paciente
     p = doc.add_paragraph()
-    p.add_run("Paciente: ").bold = True
-    p.add_run("{{ paciente }}                                                                             ")
-    p.add_run("Edad: ").bold = True
-    p.add_run("{{ edad }}\n")
-    p.add_run("Fecha: ").bold = True
-    p.add_run("{{ fecha }}                                                                     ")
-    p.add_run("Derivado por: ").bold = True
-    p.add_run("{{ derivado }}\n")
-    p.add_run("Motivo de consulta: ").bold = True
-    p.add_run("{{ motivo }}")
+    p.paragraph_format.space_after = Pt(8)
     
-    # Título general estudio
-    p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(12)
-    r = p.add_run("ESTUDIO DINÁMICO AMBAS ATM\nESTUDIO")
+    r = p.add_run("Paciente: ")
     r.bold = True
-    r.font.size = Pt(11)
+    r.font.name = 'Arial'
+    r.font.color.rgb = NEGRO
     
-    # --- FUNCIÓN REUTILIZABLE PARA AMBOS LADOS (Estructura lineal exacta) ---
+    r = p.add_run("{{ paciente }}                                                                             ")
+    r.font.name = 'Arial'
+    
+    r = p.add_run("Edad: ")
+    r.bold = True
+    r.font.name = 'Arial'
+    r.font.color.rgb = NEGRO
+    
+    r = p.add_run("{{ edad }}\n")
+    r.font.name = 'Arial'
+    
+    r = p.add_run("Fecha: ")
+    r.bold = True
+    r.font.name = 'Arial'
+    r.font.color.rgb = NEGRO
+    
+    r = p.add_run("{{ fecha }}                                                                     ")
+    r.font.name = 'Arial'
+    
+    r = p.add_run("Derivado por: ")
+    r.bold = True
+    r.font.name = 'Arial'
+    r.font.color.rgb = NEGRO
+    
+    r = p.add_run("{{ derivado }}\n")
+    r.font.name = 'Arial'
+    
+    r = p.add_run("Motivo de consulta: ")
+    r.bold = True
+    r.font.name = 'Arial'
+    r.font.color.rgb = NEGRO
+    
+    r = p.add_run("{{ motivo }}")
+    r.font.name = 'Arial'
+    
+    # NUEVA LÍNEA DISCONTINUA DE SEPARACIÓN (Datos Paciente vs Estudio)
+    p_linea_desc = doc.add_paragraph()
+    p_linea_desc.paragraph_format.space_before = Pt(6)
+    p_linea_desc.paragraph_format.space_after = Pt(12)
+    r_ldesc = p_linea_desc.add_run("--------------------------------------------------------------------------------")
+    r_ldesc.font.name = 'Arial'
+    r_ldesc.font.color.rgb = GRIS_LINEA
+    
+    # Título general estudio (CENTRADO Y SIN REPETICIONES)
+    p_estudio = doc.add_paragraph()
+    p_estudio.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_estudio.paragraph_format.space_after = Pt(12)
+    r = p_estudio.add_run("ESTUDIO DINÁMICO AMBAS ATM")
+    r.bold = True
+    r.font.name = 'Arial'
+    r.font.size = Pt(12)
+    r.font.color.rgb = NEGRO
+    
+    # --- FUNCIÓN REUTILIZABLE PARA AMBOS LADOS (Formato Arial y Azul Claro) ---
     def agregar_bloque_atm(lado_nombre, prefijo):
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(12)
+        p.paragraph_format.space_after = Pt(6)
         r = p.add_run(f"ESTUDIO ARTICULACIÓN TEMPOROMANDIBULAR {lado_nombre}")
         r.bold = True
+        r.font.name = 'Arial'
         r.font.size = Pt(11)
+        r.font.color.rgb = AZUL_CLARO # Aplicado azul claro solicitado
         
-        p = doc.add_paragraph()
-        p.add_run("Cóndilo mandibular: ").bold = True
-        p.add_run(f"{{{{ condilo_{prefijo} }}}}\n")
-        p.add_run("Espacio articular: ").bold = True
-        p.add_run(f"{{{{ espacio_{prefijo} }}}}\n")
-        p.add_run("Derrame articular: ").bold = True
-        p.add_run(f"{{{{ derrame_{prefijo} }}}}\n")
+        # Campos de texto estructurados linealmente
+        campos = [
+            ("Cóndilo mandibular: ", f"{{{{ condilo_{prefijo} }}}}\n"),
+            ("Espacio articular: ", f"{{{{ espacio_{prefijo} }}}}\n"),
+            ("Derrame articular: ", f"{{{{ derrame_{prefijo} }}}}\n")
+        ]
         
-        p.add_run("Medidas condilares: ").bold = True
-        p.add_run("Anterior ").italic = True
-        p.add_run(f"{{{{ med_as_{prefijo} }}}} mm. ")
-        p.add_run("Lateral: ").italic = True
-        p.add_run(f"{{{{ med_lat_{prefijo} }}}} mm. ")
-        p.add_run("Posterior: ").italic = True
-        p.add_run(f"{{{{ med_pi_{prefijo} }}}} mm.\n")
+        p_campos = doc.add_paragraph()
+        p_campos.paragraph_format.space_after = Pt(4)
+        for label, var in campos:
+            r1 = p_campos.add_run(label)
+            r1.bold = True
+            r1.font.name = 'Arial'
+            r2 = p_campos.add_run(var)
+            r2.font.name = 'Arial'
+            
+        # Fila de Medidas Condilares
+        p_medidas = doc.add_paragraph()
+        p_medidas.paragraph_format.space_after = Pt(4)
+        r = p_medidas.add_run("Medidas condilares: ")
+        r.bold = True
+        r.font.name = 'Arial'
         
-        p.add_run("Posición condilar (Pullinger): ").bold = True
-        p.add_run(f"{{{{ pullinger_{prefijo} }}}}\n")
-        p.add_run("Relación cóndilo-fosa glenoidea: ").bold = True
-        p.add_run(f"{{{{ relacion_{prefijo} }}}}\n\n")
+        r = p_medidas.add_run("Anterior ")
+        r.italic = True
+        r.font.name = 'Arial'
+        r = p_medidas.add_run(f"{{{{ med_as_{prefijo} }}}} mm.   ")
+        r.font.name = 'Arial'
         
-        p.add_run("Disco articular: ").bold = True
-        p.add_run(f"{{{{ disco_{prefijo} }}}}                                                           ")
-        p.add_run("Situación en hora: ").bold = True
-        p.add_run(f"{{{{ hora_{prefijo} }}}}\n\n")
+        r = p_medidas.add_run("Lateral: ")
+        r.italic = True
+        r.font.name = 'Arial'
+        r = p_medidas.add_run(f"{{{{ med_lat_{prefijo} }}}} mm.   ")
+        r.font.name = 'Arial'
         
-        p.add_run("Estudio dinámico:\n\n").bold = True
-        p.add_run("·       Boca cerrada: ").bold = True
-        p.add_run(f"{{{{ cerrada_{prefijo} }}}}\n")
-        p.add_run("·       Boca abierta: ").bold = True
-        p.add_run(f"{{{{ abierta_{prefijo} }}}}\n")
-        p.add_run("·       Reposición: ").bold = True
-        p.add_run(f"{{{{ repo_{prefijo} }}}}")
+        r = p_medidas.add_run("Posterior: ")
+        r.italic = True
+        r.font.name = 'Arial'
+        r = p_medidas.add_run(f"{{{{ med_pi_{prefijo} }}}} mm.\n")
+        r.font.name = 'Arial'
+        
+        # Continuación de campos de posición
+        r = p_medidas.add_run("Posición condilar (Pullinger): ")
+        r.bold = True
+        r.font.name = 'Arial'
+        r = p_medidas.add_run(f"{{{{ pullinger_{prefijo} }}}}\n")
+        r.font.name = 'Arial'
+        
+        r = p_medidas.add_run("Relación cóndilo-fosa glenoidea: ")
+        r.bold = True
+        r.font.name = 'Arial'
+        r = p_medidas.add_run(f"{{{{ relacion_{prefijo} }}}}")
+        r.font.name = 'Arial'
+        
+        # Disco articular y Hora en una sola línea espaciada
+        p_disco = doc.add_paragraph()
+        p_disco.paragraph_format.space_before = Pt(6)
+        p_disco.paragraph_format.space_after = Pt(6)
+        r = p_disco.add_run("Disco articular: ")
+        r.bold = True
+        r.font.name = 'Arial'
+        r = p_disco.add_run(f"{{{{ disco_{prefijo} }}}}                                                           ")
+        r.font.name = 'Arial'
+        r = p_disco.add_run("Situación en hora: ")
+        r.bold = True
+        r.font.name = 'Arial'
+        r = p_disco.add_run(f"{{{{ hora_{prefijo} }}}}")
+        r.font.name = 'Arial'
+        
+        # Subsección de Estudio Dinámico
+        p_dinamico = doc.add_paragraph()
+        p_dinamico.paragraph_format.space_before = Pt(6)
+        p_dinamico.paragraph_format.space_after = Pt(4)
+        r = p_dinamico.add_run("Estudio dinámico:\n")
+        r.bold = True
+        r.font.name = 'Arial'
+        
+        r = p_dinamico.add_run("·       Boca cerrada: ")
+        r.bold = True
+        r.font.name = 'Arial'
+        r = p_dinamico.add_run(f"{{{{ cerrada_{prefijo} }}}}\n")
+        r.font.name = 'Arial'
+        
+        r = p_dinamico.add_run("·       Boca abierta: ")
+        r.bold = True
+        r.font.name = 'Arial'
+        r = p_dinamico.add_run(f"{{{{ abierta_{prefijo} }}}}\n")
+        r.font.name = 'Arial'
+        
+        r = p_dinamico.add_run("·       Reposición: ")
+        r.bold = True
+        r.font.name = 'Arial'
+        r = p_dinamico.add_run(f"{{{{ repo_{prefijo} }}}}")
+        r.font.name = 'Arial'
         
     agregar_bloque_atm("DERECHA", "der")
     agregar_bloque_atm("IZQUIERDA", "izq")
     
-    # Línea final y conclusión
+    # Línea final de separación
     p_linea2 = doc.add_paragraph()
     p_linea2.paragraph_format.space_before = Pt(12)
-    p_linea2.add_run("--------------------------------------------------------------------------------")
+    r_l2 = p_linea2.add_run("--------------------------------------------------------------------------------")
+    r_l2.font.name = 'Arial'
+    r_l2.font.color.rgb = GRIS_LINEA
     
-    p = doc.add_paragraph()
-    p.add_run("CONCLUSIÓN: ").bold = True
-    p.add_run("{{ conclusion }}")
+    # Conclusión en Azul Claro
+    p_conclusion = doc.add_paragraph()
+    r = p_conclusion.add_run("CONCLUSIÓN: ")
+    r.bold = True
+    r.font.name = 'Arial'
+    r.font.color.rgb = AZUL_CLARO # Conclusión también resaltada en azul claro
+    r = p_conclusion.add_run("{{ conclusion }}")
+    r.font.name = 'Arial'
     
-    # Retornar el archivo en memoria listo para descargar
     bio_plantilla = io.BytesIO()
     doc.save(bio_plantilla)
     bio_plantilla.seek(0)
     return bio_plantilla
 
-# Generar archivo físico en el servidor por si acaso
+# Forzar la escritura física en el servidor
 try:
     plantilla_binaria = generar_plantilla_fiel()
     with open("plantilla_atm.docx", "wb") as f:
@@ -136,7 +255,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- BOTÓN SECUNDARIO EXCLUSIVO PARA DESCARGAR LA PLANTILLA ---
+# --- MENÚ LATERAL: DESCARGAR PLANTILLA PARA RESPALDO ---
 st.sidebar.markdown("### 📂 Zona de Respaldos")
 plantilla_descarga = generar_plantilla_fiel()
 st.sidebar.download_button(
@@ -145,7 +264,7 @@ st.sidebar.download_button(
     file_name="plantilla_atm.docx",
     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 )
-st.sidebar.markdown("Use este botón para guardar el archivo base idéntico en su iPad o computadora.")
+st.sidebar.markdown("Use este botón si desea archivar este modelo limpio corregido en su iPad o computadora.")
 
 st.markdown("<h1 class='titulo-principal'>Informe Ecográfico de la Articulación Temporomandibular (ATM)</h1>", unsafe_allow_html=True)
 st.markdown("<hr style='border: 1px solid #1E3A8A;'>", unsafe_allow_html=True)
