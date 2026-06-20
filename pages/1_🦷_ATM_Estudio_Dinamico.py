@@ -37,7 +37,6 @@ def generar_plantilla_fiel(ctx_datos):
     # --- TABLA INVISIBLE PARA ALINEACIÓN PERFECTA DE MÁRGENES ---
     tabla_datos = doc.add_table(rows=2, cols=2)
     tabla_datos.autofit = False
-    
     tabla_datos.columns[0].width = Inches(4.5)
     tabla_datos.columns[1].width = Inches(2.4)
     
@@ -171,9 +170,6 @@ st.markdown("""
 
 st.markdown("<h1 class='titulo-principal'>Informe Ecográfico de la Articulación Temporomandibular (ATM)</h1>", unsafe_allow_html=True)
 
-if "dictado_der" not in st.session_state: st.session_state.dictado_der = ""
-if "dictado_izq" not in st.session_state: st.session_state.dictado_izq = ""
-
 def componente_microfono_visible(lado_id):
     js_code = f"""
     <div style="font-family: sans-serif; display: flex; gap: 10px; align-items: center;">
@@ -227,6 +223,20 @@ opts_repo = ["Espontánea", "Requiere maniobras del paciente", "Requiere maniobr
 
 col_der, col_izq = st.columns(2)
 
+def evaluar_pullinger(anterior, posterior):
+    val_ant = str(anterior).strip()
+    val_post = str(posterior).strip()
+    if not val_ant or not val_post:
+        return "Pendiente"
+    try:
+        v_a = float(val_ant.replace(',', '.'))
+        v_p = float(val_post.replace(',', '.'))
+        resultado = ((v_p - v_a) / (v_p + v_a)) * 100
+        signo = "+" if resultado > 0 else ""
+        return f"{signo}{resultado:.2f}%"
+    except ValueError:
+        return "Pendiente"
+
 with col_der:
     with st.container(border=True):
         st.markdown("<h2 class='sub-seccion'>🔹ATM Derecha</h2>", unsafe_allow_html=True)
@@ -236,32 +246,18 @@ with col_der:
         
         st.markdown("<p class='titulo-medidas'>Medidas condilares (mm):</p>", unsafe_allow_html=True)
         r_md = componente_microfono_visible("der")
-        if r_md: st.session_state.dictado_der = r_md
         
         m1, m2, m3 = st.columns(3)
-        with m1: ma_d = st.text_input("Anterior (D)", key="ma_d")
-        with m2: ml_d = st.text_input("Lateral (D)", key="ml_d")
-        with m3: mp_d = st.text_input("Posterior (D)", key="mp_d")
+        with m1: ma_d = st.text_input("Anterior (D)", value="", key="ma_d")
+        with m2: ml_d = st.text_input("Lateral (D)", value="", key="ml_d")
+        with m3: mp_d = st.text_input("Posterior (D)", value="", key="mp_d")
         
-        def proc(d, a, l, p):
-            texto_dictado = str(d).strip() if d is not None else ""
-            if texto_dictado and len(re.findall(r"[0-9]+", texto_dictado)) >= 3: 
-                return re.findall(r"[0-9.]+", texto_dictado)[:3]
-            # Si las casillas de la app están completamente vacías o tienen espacios, devolvemos cadenas vacías estrictas.
-            val_a = str(a).strip()
-            val_l = str(l).strip()
-            val_p = str(p).strip()
-            return val_a, val_l, val_p
-            
-        v1, v2, v3 = proc(st.session_state.dictado_der, ma_d, ml_d, mp_d)
+        # El micrófono escribe directo en la UI, pero si la UI está vacía, manda la cadena vacía exacta.
+        v1 = ma_d.strip()
+        v2 = ml_d.strip()
+        v3 = mp_d.strip()
         
-        def calc(a, p):
-            try:
-                if not a or not p: return "Pendiente"
-                v_a, v_p = float(str(a).replace(',','.')), float(str(p).replace(',','.'))
-                return f"{'+' if (v_p-v_a)>0 else ''}{((v_p-v_a)/(v_p+v_a))*100:.2f}%"
-            except: return "Error"
-        res_d = calc(v1, v3)
+        res_d = evaluar_pullinger(v1, v3)
         st.markdown(f"<div class='resultado-calculo'>🧮 Pullinger (D): {res_d}</div>", unsafe_allow_html=True)
         
         rel_d = st.multiselect("Relación (D):", opts_relacion, key="r_d")
@@ -280,14 +276,17 @@ with col_izq:
         
         st.markdown("<p class='titulo-medidas'>Medidas condilares (mm):</p>", unsafe_allow_html=True)
         r_mi = componente_microfono_visible("izq")
-        if r_mi: st.session_state.dictado_izq = r_mi
         
         m4, m5, m6 = st.columns(3)
-        with m4: ma_i = st.text_input("Anterior (I)", key="ma_i")
-        with m5: ml_i = st.text_input("Lateral (I)", key="ml_i")
-        with m6: mp_i = st.text_input("Posterior (I)", key="mp_i")
-        v4, v5, v6 = proc(st.session_state.dictado_izq, ma_i, ml_i, mp_i)
-        res_i = calc(v4, v6)
+        with m4: ma_i = st.text_input("Anterior (I)", value="", key="ma_i")
+        with m5: ml_i = st.text_input("Lateral (I)", value="", key="ml_i")
+        with m6: mp_i = st.text_input("Posterior (I)", value="", key="mp_i")
+        
+        v4 = ma_i.strip()
+        v5 = ml_i.strip()
+        v6 = mp_i.strip()
+        
+        res_i = evaluar_pullinger(v4, v6)
         st.markdown(f"<div class='resultado-calculo'>🧮 Pullinger (I): {res_i}</div>", unsafe_allow_html=True)
         
         rel_i = st.multiselect("Relación (I):", opts_relacion, key="r_i")
