@@ -224,10 +224,12 @@ with col_der:
         with m2: ml_d = st.text_input("Lateral (D)", key="ml_d")
         with m3: mp_d = st.text_input("Posterior (D)", key="mp_d")
         
-        def proc(d, a, l, p):
-            if d and len(re.findall(r"[0-9]+", d))>=3: return re.findall(r"[0-9.]+", d)[:3]
+       def proc(d, a, l, p):
+            # Convertimos "d" a texto de forma segura para evitar el TypeError
+            texto_dictado = str(d) if d is not None else ""
+            if texto_dictado and len(re.findall(r"[0-9]+", texto_dictado)) >= 3: 
+                return re.findall(r"[0-9.]+", texto_dictado)[:3]
             return a, l, p
-        v1, v2, v3 = proc(st.session_state.dictado_der, ma_d, ml_d, mp_d)
         
         def calc(a, p):
             try:
