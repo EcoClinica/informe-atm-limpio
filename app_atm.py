@@ -8,14 +8,14 @@ import re
 # Configuración de página ancha profesional
 st.set_page_config(page_title="Informe Ecográfico ATM", layout="wide", page_icon="🎙️")
 
-# Estilo CSS original e impecable (Limpio y adaptado)
+# Estilo CSS original e impecable
 st.markdown("""
     <style>
     .titulo-principal { color: #1E3A8A; font-weight: bold; text-align: center; margin-top: -20px; }
     .sub-seccion { color: #0284C7; border-bottom: 2px solid #0284C7; padding-bottom: 5px; margin-bottom: 15px; font-size: 20px; }
     .titulo-medidas { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #1E3A8A !important; }
     .esfera { font-size: 16px; vertical-align: middle; margin-right: 5px; }
-    .resultado-calculo { background-color: #E0F2FE; padding: 12px; border-radius: 5px; border-left: 4px solid #0284C7; margin-top: 10px; font-size: 14px; color: #1E3A8A !important; font-weight: bold; }
+    .resultado-calculo { background-color: #E0F2FE; padding: 12px; border-radius: 5px; border-left: 4px solid #0284C7; margin-top: 10px; margin-bottom: 15px; font-size: 14px; color: #1E3A8A !important; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -129,7 +129,7 @@ def componente_microfono_visible(lado_id):
             }});
         }};
         document.head.appendChild(stScript);
-     biographical}})();
+    }})();
     </script>
 
     <style>
@@ -218,30 +218,27 @@ with col_der:
         cartilago_der = st.selectbox("Cartílago articular (D):", opts_cartilago, key="ca_der")
         espacio_der = st.multiselect("Espacio articular (D):", opts_espacio, default=["Libre"], key="es_der")
         
-        st.markdown("<p class='titulo-medidas'>Medidas por voz o manual (mm):</p>", unsafe_allow_html=True)
+        st.markdown("<p class='titulo-medidas'>Medidas (mm):</p>", unsafe_allow_html=True)
         
-        # Guardar retorno del micro en session_state para evitar pérdidas de datos
         res_micro_der = componente_microfono_visible("der")
         if res_micro_der:
             st.session_state.dictado_der = res_micro_der
             
         m1, m2, m3 = st.columns(3)
-        with m1: manual_as_der = st.text_input("Anterosuperior (D)", key="man_as_der")
-        with m2: manual_lat_der = st.text_input("Lateral (D)", key="man_lat_der")
-        with m3: manual_pi_der = st.text_input("Posteroinferior (D)", key="man_pi_der")
+        with m1: manual_as_der = st.text_input("Anterosuperior (D)", value="", key="man_as_der")
+        with m2: manual_lat_der = st.text_input("Lateral (D)", value="", key="man_lat_der")
+        with m3: manual_pi_der = st.text_input("Posteroinferior (D)", value="", key="man_pi_der")
         
         med_as_der, med_lat_der, med_pi_der = procesar_medidas_sistema(st.session_state.dictado_der, manual_as_der, manual_lat_der, manual_pi_der)
         
-        # Muestra los datos que se están procesando actualmente de manera clara
-        st.caption(f"Medidas activas (D): AS: **{med_as_der}** | LAT: **{med_lat_der}** | PI: **{med_pi_der}**")
+        # Pullinger inmediatamente debajo de las medidas
+        res_der = calcular_posicion_condilo(med_as_der, med_pi_der)
+        st.markdown(f"<div class='resultado-calculo'><strong>🧮 Índice de Pullinger (D):</strong> {res_der}</div>", unsafe_allow_html=True)
         
         st.subheader("Disco Articular Derecho")
         ecoestructura_der = st.selectbox("Ecoestructura (D):", opts_ecoestructura, key="eco_der")
         situacion_der = st.selectbox("Situación (D):", opts_situacion, key="sit_der")
         relacion_der = st.selectbox("Relación cóndilo-cavidad glenoidea (D):", opts_relacion, key="rel_der")
-        
-        res_der = calcular_posicion_condilo(med_as_der, med_pi_der)
-        st.markdown(f"<div class='resultado-calculo'><strong>🧮 Índice de Pullinger (D):</strong> {res_der}</div>", unsafe_allow_html=True)
         
         st.markdown("<br><b>Posición con Boca Cerrada (D):</b>", unsafe_allow_html=True)
         hora_cerrada_der = st.selectbox("En hora", opts_horas, key="h_c_der")
@@ -264,28 +261,27 @@ with col_izq:
         cartilago_izq = st.selectbox("Cartílago articular (I):", opts_cartilago, key="ca_izq")
         espacio_izq = st.multiselect("Espacio articular (I):", opts_espacio, default=["Libre"], key="es_izq")
         
-        st.markdown("<p class='titulo-medidas'>Medidas por voz o manual (mm):</p>", unsafe_allow_html=True)
+        st.markdown("<p class='titulo-medidas'>Medidas (mm):</p>", unsafe_allow_html=True)
         
         res_micro_izq = componente_microfono_visible("izq")
         if res_micro_izq:
             st.session_state.dictado_izq = res_micro_izq
             
         m4, m5, m6 = st.columns(3)
-        with m4: manual_as_izq = st.text_input("Anterosuperior (I)", key="man_as_izq")
-        with m5: manual_lat_izq = st.text_input("Lateral (I)", key="man_lat_izq")
-        with m6: manual_pi_izq = st.text_input("Posteroinferior (I)", key="man_pi_izq")
+        with m4: manual_as_izq = st.text_input("Anterosuperior (I)", value="", key="man_as_izq")
+        with m5: manual_lat_izq = st.text_input("Lateral (I)", value="", key="man_lat_izq")
+        with m6: manual_pi_izq = st.text_input("Posteroinferior (I)", value="", key="man_pi_izq")
         
         med_as_izq, med_lat_izq, med_pi_izq = procesar_medidas_sistema(st.session_state.dictado_izq, manual_as_izq, manual_lat_izq, manual_pi_izq)
         
-        st.caption(f"Medidas activas (I): AS: **{med_as_izq}** | LAT: **{med_lat_izq}** | PI: **{med_pi_izq}**")
+        # Pullinger inmediatamente debajo de las medidas
+        res_izq = calcular_posicion_condilo(med_as_izq, med_pi_izq)
+        st.markdown(f"<div class='resultado-calculo'><strong>🧮 Índice de Pullinger (I):</strong> {res_izq}</div>", unsafe_allow_html=True)
         
         st.subheader("Disco Articular Izquierdo")
         ecoestructura_izq = st.selectbox("Ecoestructura (I):", opts_ecoestructura, key="eco_izq")
         situacion_izq = st.selectbox("Situación (I):", opts_situacion, key="sit_izq")
         relacion_izq = st.selectbox("Relación cóndilo-cavidad glenoidea (I):", opts_relacion, key="rel_izq")
-        
-        res_izq = calcular_posicion_condilo(med_as_izq, med_pi_izq)
-        st.markdown(f"<div class='resultado-calculo'><strong>🧮 Índice de Pullinger (I):</strong> {res_izq}</div>", unsafe_allow_html=True)
         
         st.markdown("<br><b>Posición con Boca Cerrada (I):</b>", unsafe_allow_html=True)
         hora_cerrada_izq = st.selectbox("En hora", opts_horas, key="h_c_izq")
