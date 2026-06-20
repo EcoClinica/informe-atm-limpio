@@ -34,21 +34,40 @@ def generar_plantilla_fiel(ctx_datos):
     r_l1.font.name = 'Arial'
     r_l1.font.color.rgb = GRIS_LINEA
     
-    p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(8)
+    # --- TABLA INVISIBLE PARA ALINEACIÓN PERFECTA DE MÁRGENES ---
+    tabla_datos = doc.add_table(rows=2, cols=2)
+    tabla_datos.autofit = False
     
-    def add_campo(parrafo, etiqueta, valor, espacio="   "):
-        r_etiq = parrafo.add_run(etiqueta)
+    # Definimos anchos fijos para las dos columnas (en pulgadas)
+    tabla_datos.columns[0].width = Inches(4.5)
+    tabla_datos.columns[1].width = Inches(2.4)
+    
+    def agregar_celda_campo(celda, etiqueta, valor):
+        p_celda = celda.paragraphs[0]
+        p_celda.paragraph_format.space_after = Pt(4)
+        r_etiq = p_celda.add_run(etiqueta)
         r_etiq.bold = True
         r_etiq.font.name = 'Arial'
-        r_val = parrafo.add_run(f"{valor}{espacio}")
+        r_val = p_celda.add_run(str(valor))
         r_val.font.name = 'Arial'
 
-    add_campo(p, "Paciente: ", ctx_datos.get('paciente', ''), "                                                                             ")
-    add_campo(p, "Edad: ", ctx_datos.get('edad', ''), "\n")
-    add_campo(p, "Fecha: ", ctx_datos.get('fecha', ''), "                                                                     ")
-    add_campo(p, "Derivado por: ", ctx_datos.get('derivado', ''), "\n")
-    add_campo(p, "Motivo de consulta: ", ctx_datos.get('motivo', ''), "")
+    # Fila 1: Paciente (Izquierda) | Edad (Derecha)
+    agregar_celda_campo(tabla_datos.cell(0, 0), "Paciente: ", ctx_datos.get('paciente', ''))
+    agregar_celda_campo(tabla_datos.cell(0, 1), "Edad: ", ctx_datos.get('edad', ''))
+    
+    # Fila 2: Fecha (Izquierda) | Derivado por (Derecha)
+    agregar_celda_campo(tabla_datos.cell(1, 0), "Fecha: ", ctx_datos.get('fecha', ''))
+    agregar_celda_campo(tabla_datos.cell(1, 1), "Derivado por: ", ctx_datos.get('derivado', ''))
+    
+    # Motivo de consulta (va abajo de la tabla ocupando todo el ancho de forma natural)
+    p_motivo = doc.add_paragraph()
+    p_motivo.paragraph_format.space_before = Pt(4)
+    p_motivo.paragraph_format.space_after = Pt(8)
+    r_mot_etiq = p_motivo.add_run("Motivo de consulta: ")
+    r_mot_etiq.bold = True
+    r_mot_etiq.font.name = 'Arial'
+    r_mot_val = p_motivo.add_run(ctx_datos.get('motivo', ''))
+    r_mot_val.font.name = 'Arial'
     
     p_linea_desc = doc.add_paragraph()
     p_linea_desc.paragraph_format.space_before = Pt(6)
@@ -77,6 +96,13 @@ def generar_plantilla_fiel(ctx_datos):
         p_campos = doc.add_paragraph()
         p_campos.paragraph_format.space_after = Pt(4)
         
+        def add_campo(parrafo, etiqueta, valor, espacio="   "):
+            r_etiq = parrafo.add_run(etiqueta)
+            r_etiq.bold = True
+            r_etiq.font.name = 'Arial'
+            r_val = parrafo.add_run(f"{valor}{espacio}")
+            r_val.font.name = 'Arial'
+            
         add_campo(p_campos, "Cóndilo mandibular: ", ctx_datos.get(f'condilo_{prefijo}', ''), "\n")
         add_campo(p_campos, "Espacio articular: ", ctx_datos.get(f'espacio_{prefijo}', ''), "\n")
         add_campo(p_campos, "Derrame articular: ", ctx_datos.get(f'derrame_{prefijo}', ''), "")
@@ -278,15 +304,23 @@ conclusion = st.text_area("📝 CONCLUSIÓN:")
 def unir_opciones(lista):
     return ", ".join(lista) if lista else ""
 
+def limpiar_medida(valor, llave_esperada):
+    val_str = str(valor).strip()
+    if val_str == llave_esperada or not val_str:
+        return ""
+    return val_str
+
 ctx = {
     'paciente': nombres, 'edad': edad, 'derivado': derivado, 'fecha': fecha.strftime("%d/%m/%Y"), 'motivo': motivo,
     'condilo_der': unir_opciones(condilo_der), 'espacio_der': unir_opciones(espacio_der), 'derrame_der': unir_opciones(derrame_der), 
-    'med_as_der': v1, 'med_lat_der': v2, 'med_pi_der': v3, 'pullinger_der': res_d if res_d != "Pendiente" else "", 
+    'med_as_der': limpiar_medida(v1, 'ma_d'), 'med_lat_der': limpiar_medida(v2, 'ml_d'), 'med_pi_der': limpiar_medida(v3, 'mp_d'), 
+    'pullinger_der': res_d if res_d != "Pendiente" else "", 
     'relacion_der': unir_opciones(rel_d), 'disco_der': unir_opciones(disc_d), 'hora_der': unir_opciones(h_d), 
     'cerrada_der': unir_opciones(cerr_d), 'abierta_der': unir_opciones(ab_d), 'repo_der': unir_opciones(rep_d),
     
     'condilo_izq': unir_opciones(condilo_izq), 'espacio_izq': unir_opciones(espacio_izq), 'derrame_izq': unir_opciones(derrame_izq), 
-    'med_as_izq': v4, 'med_lat_izq': v5, 'med_pi_izq': v6, 'pullinger_izq': res_i if res_i != "Pendiente" else "", 
+    'med_as_izq': limpiar_medida(v4, 'ma_i'), 'med_lat_izq': limpiar_medida(v5, 'ml_i'), 'med_pi_izq': limpiar_medida(v6, 'mp_i'), 
+    'pullinger_izq': res_i if res_i != "Pendiente" else "", 
     'relacion_izq': unir_opciones(rel_i), 'disco_izq': unir_opciones(disc_i), 'hora_izq': unir_opciones(h_i), 
     'cerrada_izq': unir_opciones(cerr_i), 'abierta_izq': unir_opciones(ab_i), 'repo_izq': unir_opciones(rep_i),
     'conclusion': conclusion
