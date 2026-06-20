@@ -1,3 +1,10 @@
+¡Ah, comprendo perfectamente! El problema es que la función proc (que procesa la entrada del micrófono) está diseñada para que, si las casillas de texto están vacías en la pantalla, retorne por defecto los valores de los nombres de las variables internas (ma_d, ml_d, etc.) en lugar de devolverlas en blanco. Como esas variables no están vacías, la fórmula calcula un índice de Pullinger ficticio.
+
+Vamos a solucionar esto de raíz. He reescrito la lógica interna de validación para que si los campos están vacíos en la aplicación, el resultado de las medidas y del índice de Pullinger en el archivo Word sea completamente invisible o vacío, tal como deseas.
+
+Aquí tienes el código completo y corregido para tu archivo pages/1_🦷_ATM_Estudio_Dinamico.py:
+
+Python
 import streamlit as st
 import streamlit.components.v1 as components
 import datetime
@@ -38,7 +45,6 @@ def generar_plantilla_fiel(ctx_datos):
     tabla_datos = doc.add_table(rows=2, cols=2)
     tabla_datos.autofit = False
     
-    # Definimos anchos fijos para las dos columnas (en pulgadas)
     tabla_datos.columns[0].width = Inches(4.5)
     tabla_datos.columns[1].width = Inches(2.4)
     
@@ -51,15 +57,11 @@ def generar_plantilla_fiel(ctx_datos):
         r_val = p_celda.add_run(str(valor))
         r_val.font.name = 'Arial'
 
-    # Fila 1: Paciente (Izquierda) | Edad (Derecha)
     agregar_celda_campo(tabla_datos.cell(0, 0), "Paciente: ", ctx_datos.get('paciente', ''))
     agregar_celda_campo(tabla_datos.cell(0, 1), "Edad: ", ctx_datos.get('edad', ''))
-    
-    # Fila 2: Fecha (Izquierda) | Derivado por (Derecha)
     agregar_celda_campo(tabla_datos.cell(1, 0), "Fecha: ", ctx_datos.get('fecha', ''))
     agregar_celda_campo(tabla_datos.cell(1, 1), "Derivado por: ", ctx_datos.get('derivado', ''))
     
-    # Motivo de consulta (va abajo de la tabla ocupando todo el ancho de forma natural)
     p_motivo = doc.add_paragraph()
     p_motivo.paragraph_format.space_before = Pt(4)
     p_motivo.paragraph_format.space_after = Pt(8)
@@ -249,10 +251,14 @@ with col_der:
         with m3: mp_d = st.text_input("Posterior (D)", key="mp_d")
         
         def proc(d, a, l, p):
-            texto_dictado = str(d) if d is not None else ""
+            texto_dictado = str(d).strip() if d is not None else ""
             if texto_dictado and len(re.findall(r"[0-9]+", texto_dictado)) >= 3: 
                 return re.findall(r"[0-9.]+", texto_dictado)[:3]
-            return a, l, p
+            # Si las casillas de la app están completamente vacías o tienen espacios, devolvemos cadenas vacías estrictas.
+            val_a = str(a).strip()
+            val_l = str(l).strip()
+            val_p = str(p).strip()
+            return val_a, val_l, val_p
             
         v1, v2, v3 = proc(st.session_state.dictado_der, ma_d, ml_d, mp_d)
         
@@ -304,23 +310,15 @@ conclusion = st.text_area("📝 CONCLUSIÓN:")
 def unir_opciones(lista):
     return ", ".join(lista) if lista else ""
 
-def limpiar_medida(valor, llave_esperada):
-    val_str = str(valor).strip()
-    if val_str == llave_esperada or not val_str:
-        return ""
-    return val_str
-
 ctx = {
     'paciente': nombres, 'edad': edad, 'derivado': derivado, 'fecha': fecha.strftime("%d/%m/%Y"), 'motivo': motivo,
     'condilo_der': unir_opciones(condilo_der), 'espacio_der': unir_opciones(espacio_der), 'derrame_der': unir_opciones(derrame_der), 
-    'med_as_der': limpiar_medida(v1, 'ma_d'), 'med_lat_der': limpiar_medida(v2, 'ml_d'), 'med_pi_der': limpiar_medida(v3, 'mp_d'), 
-    'pullinger_der': res_d if res_d != "Pendiente" else "", 
+    'med_as_der': v1, 'med_lat_der': v2, 'med_pi_der': v3, 'pullinger_der': res_d if res_d != "Pendiente" else "", 
     'relacion_der': unir_opciones(rel_d), 'disco_der': unir_opciones(disc_d), 'hora_der': unir_opciones(h_d), 
     'cerrada_der': unir_opciones(cerr_d), 'abierta_der': unir_opciones(ab_d), 'repo_der': unir_opciones(rep_d),
     
     'condilo_izq': unir_opciones(condilo_izq), 'espacio_izq': unir_opciones(espacio_izq), 'derrame_izq': unir_opciones(derrame_izq), 
-    'med_as_izq': limpiar_medida(v4, 'ma_i'), 'med_lat_izq': limpiar_medida(v5, 'ml_i'), 'med_pi_izq': limpiar_medida(v6, 'mp_i'), 
-    'pullinger_izq': res_i if res_i != "Pendiente" else "", 
+    'med_as_izq': v4, 'med_lat_izq': v5, 'med_pi_izq': v6, 'pullinger_izq': res_i if res_i != "Pendiente" else "", 
     'relacion_izq': unir_opciones(rel_i), 'disco_izq': unir_opciones(disc_i), 'hora_izq': unir_opciones(h_i), 
     'cerrada_izq': unir_opciones(cerr_i), 'abierta_izq': unir_opciones(ab_i), 'repo_izq': unir_opciones(rep_i),
     'conclusion': conclusion
