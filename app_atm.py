@@ -4,11 +4,128 @@ from docxtpl import DocxTemplate
 import datetime
 import io
 import re
+import os
+import docx
+from docx import Document
+from docx.shared import Pt, Inches, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-# Configuración de página ancha profesional
+# --- SISTEMA DE AUTO-GENERACIÓN DE PLANTILLA FIEL ---
+def generar_plantilla_fiel():
+    doc = Document()
+    
+    # Márgenes profesionales
+    for section in doc.sections:
+        section.top_margin = Inches(0.8)
+        section.bottom_margin = Inches(0.8)
+        section.left_margin = Inches(0.8)
+        section.right_margin = Inches(0.8)
+        
+    # Título Principal
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = p.add_run("INFORME ECOGRÁFICO DE LA ARTICULACIÓN TEMPOROMANDIBULAR\n(ATM)")
+    r.bold = True
+    r.font.name = 'Arial'
+    r.font.size = Pt(14)
+    r.font.color.rgb = RGBColor(0, 0, 0) # Negro puro como tu original
+    
+    # Línea de separación
+    p_linea = doc.add_paragraph()
+    p_linea.add_run("--------------------------------------------------------------------------------")
+    
+    # Bloque Datos Paciente
+    p = doc.add_paragraph()
+    p.add_run("Paciente: ").bold = True
+    p.add_run("{{ paciente }}                                                                             ")
+    p.add_run("Edad: ").bold = True
+    p.add_run("{{ edad }}\n")
+    p.add_run("Fecha: ").bold = True
+    p.add_run("{{ fecha }}                                                                     ")
+    p.add_run("Derivado por: ").bold = True
+    p.add_run("{{ derivado }}\n")
+    p.add_run("Motivo de consulta: ").bold = True
+    p.add_run("{{ motivo }}")
+    
+    # Título general estudio
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(12)
+    r = p.add_run("ESTUDIO DINÁMICO AMBAS ATM\nESTUDIO")
+    r.bold = True
+    r.font.size = Pt(11)
+    
+    # --- FUNCIÓN REUTILIZABLE PARA AMBOS LADOS (Estructura lineal exacta) ---
+    def agregar_bloque_atm(lado_nombre, prefijo):
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(12)
+        r = p.add_run(f"ESTUDIO ARTICULACIÓN TEMPOROMANDIBULAR {lado_nombre}")
+        r.bold = True
+        r.font.size = Pt(11)
+        
+        p = doc.add_paragraph()
+        p.add_run("Cóndilo mandibular: ").bold = True
+        p.add_run(f"{{{{ condilo_{prefijo} }}}}\n")
+        p.add_run("Espacio articular: ").bold = True
+        p.add_run(f"{{{{ espacio_{prefijo} }}}}\n")
+        p.add_run("Derrame articular: ").bold = True
+        p.add_run(f"{{{{ derrame_{prefijo} }}}}\n")
+        
+        p.add_run("Medidas condilares: ").bold = True
+        p.add_run("Anterior ").italic = True
+        p.add_run(f"{{{{ med_as_{prefijo} }}}} mm. ")
+        p.add_run("Lateral: ").italic = True
+        p.add_run(f"{{{{ med_lat_{prefijo} }}}} mm. ")
+        p.add_run("Posterior: ").italic = True
+        p.add_run(f"{{{{ med_pi_{prefijo} }}}} mm.\n")
+        
+        p.add_run("Posición condilar (Pullinger): ").bold = True
+        p.add_run(f"{{{{ pullinger_{prefijo} }}}}\n")
+        p.add_run("Relación cóndilo-fosa glenoidea: ").bold = True
+        p.add_run(f"{{{{ relacion_{prefijo} }}}}\n\n")
+        
+        p.add_run("Disco articular: ").bold = True
+        p.add_run(f"{{{{ disco_{prefijo} }}}}                                                           ")
+        p.add_run("Situación en hora: ").bold = True
+        p.add_run(f"{{{{ hora_{prefijo} }}}}\n\n")
+        
+        p.add_run("Estudio dinámico:\n\n").bold = True
+        p.add_run("·       Boca cerrada: ").bold = True
+        p.add_run(f"{{{{ cerrada_{prefijo} }}}}\n")
+        p.add_run("·       Boca abierta: ").bold = True
+        p.add_run(f"{{{{ abierta_{prefijo} }}}}\n")
+        p.add_run("·       Reposición: ").bold = True
+        p.add_run(f"{{{{ repo_{prefijo} }}}}")
+        
+    agregar_bloque_atm("DERECHA", "der")
+    agregar_bloque_atm("IZQUIERDA", "izq")
+    
+    # Línea final y conclusión
+    p_linea2 = doc.add_paragraph()
+    p_linea2.paragraph_format.space_before = Pt(12)
+    p_linea2.add_run("--------------------------------------------------------------------------------")
+    
+    p = doc.add_paragraph()
+    p.add_run("CONCLUSIÓN: ").bold = True
+    p.add_run("{{ conclusion }}")
+    
+    # Retornar el archivo en memoria listo para descargar
+    bio_plantilla = io.BytesIO()
+    doc.save(bio_plantilla)
+    bio_plantilla.seek(0)
+    return bio_plantilla
+
+# Generar archivo físico en el servidor por si acaso
+try:
+    plantilla_binaria = generar_plantilla_fiel()
+    with open("plantilla_atm.docx", "wb") as f:
+        f.write(plantilla_binaria.getbuffer())
+except Exception as e:
+    pass
+
+# Configuración de página ancha profesional para la web
 st.set_page_config(page_title="Informe Ecográfico ATM", layout="wide", page_icon="🎙️")
 
-# Estilo CSS impecable
+# Estilo CSS para la interfaz web
 st.markdown("""
     <style>
     .titulo-principal { color: #1E3A8A; font-weight: bold; text-align: center; margin-top: -20px; }
@@ -18,6 +135,17 @@ st.markdown("""
     .resultado-calculo { background-color: #E0F2FE; padding: 12px; border-radius: 5px; border-left: 4px solid #0284C7; margin-top: 10px; margin-bottom: 15px; font-size: 14px; color: #1E3A8A !important; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
+
+# --- BOTÓN SECUNDARIO EXCLUSIVO PARA DESCARGAR LA PLANTILLA ---
+st.sidebar.markdown("### 📂 Zona de Respaldos")
+plantilla_descarga = generar_plantilla_fiel()
+st.sidebar.download_button(
+    label="📥 Descargar plantilla original (.docx)",
+    data=plantilla_descarga,
+    file_name="plantilla_atm.docx",
+    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+)
+st.sidebar.markdown("Use este botón para guardar el archivo base idéntico en su iPad o computadora.")
 
 st.markdown("<h1 class='titulo-principal'>Informe Ecográfico de la Articulación Temporomandibular (ATM)</h1>", unsafe_allow_html=True)
 st.markdown("<hr style='border: 1px solid #1E3A8A;'>", unsafe_allow_html=True)
@@ -162,29 +290,24 @@ def calcular_posicion_condilo(ant_sup_txt, post_inf_txt):
 # --- DATOS GENERALES ---
 st.subheader("📋 Datos del Paciente")
 with st.container(border=True):
-    cp1, cp2, cp3, cp4 = st.columns(4)
+    cp1, cp2, cp3 = st.columns(3)
     with cp1:
-        nombres = st.text_input("Nombres:")
-        apellidos = st.text_input("Apellidos:")
-    with cp2:
+        nombres = st.text_input("Paciente (Nombre y Apellidos):")
         edad = st.text_input("Edad:")
-        derivado = st.text_input("Paciente derivado por Dr/a:")
-    with cp3:
+    with cp2:
         fecha = st.date_input("Fecha:", datetime.date.today(), format="DD/MM/YYYY")
+        derivado = st.text_input("Derivado por:")
+    with cp3:
         motivo = st.text_input("Motivo de consulta:")
-    with cp4:
-        antecedentes = st.text_input("Antecedentes relacionados:")
-        tratamiento_act = st.text_input("Tratamiento actual:")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Opciones con primer elemento vacío para forzar inicio limpio
-opts_morfologia = ["", "Redondeado", "Aplanado", "En pico de pájaro (en punta)", "Con cresta central", "Con cresta marginal"]
-opts_cartilago = ["", "Regular", "Irregular", "Fragmentado, sin exposición del hueso subyacente", "Fragmentado con exposición del hueso subyacente"]
-opts_espacio = ["", "Libre", "Sin derrame articular", "Con engrosamiento sinovial", "Con derrame anecoico", "Con derrame articular y con partículas ecogénicas", "Osteofitos"]
-opts_ecoestructura = ["", "Homogénea, hipoecogénico", "Heterogénea", "Irregular"]
-opts_situacion = ["", "Central, cubre la cabeza condilar", "Cubre parcialmente la cabeza condilar", "Desplazamiento, no cubre la cabeza condilar"]
+opts_condilo = ["", "Redondeado", "Aplanado", "En pico de pájaro (en punta)", "Con cresta central", "Con cresta marginal"]
+opts_espacio = ["", "Libre", "Con engrosamiento sinovial", "Osteofitos", "Regular", "Irregular"]
+opts_derrame = ["", "Sin derrame articular", "Con derrame anecoico", "Con derrame articular y con partículas ecogénicas"]
 opts_relacion = ["", "Central", "Anterior", "Posterior"]
+opts_disco = ["", "Homogénea, hipoecogénico", "Heterogénea", "Irregular"]
 opts_horas = ["", "12", "11", "10", "1", "2"]
 opts_boca_cerrada = ["", "Cubre totalmente la cabeza del cóndilo", "Cubre parcialmente la cabeza del cóndilo", "Desplazamiento, no cubre la cabeza condilar"]
 opts_boca_abierta = [
@@ -197,104 +320,91 @@ opts_boca_abierta = [
     "Desplazamiento posterior con subluxación discal, el cóndilo contacta con la cavidad glenoidea",
     "Desplazamiento posterior con luxación discal, el cóndilo contacta con la cavidad glenoidea"
 ]
-opts_repo_forma = ["", "Espontánea", "Requiere maniobras mandibulares para su recaptación por parte del paciente", "Requiere maniobras mandibulares para su recaptación por parte del médico"]
-opts_repo_tipo = ["", "Completa, cubre la cabeza del cóndilo", "Incompleta, vuelve a posicionarse en anterior", "Incompleta, vuelve a posicionarse en posterior", "No se reposiciona"]
+opts_repo = ["", "Espontánea", "Requiere maniobras mandibulares para su recaptación por parte del paciente", "Requiere maniobras mandibulares para su recaptación por parte del médico", "No se reposiciona"]
 
-# --- COLUMNAS PARALELAS DERECHA E IZQUIERDA ---
+# --- COLUMNAS PARALELAS EN LA WEB ---
 col_der, col_izq = st.columns(2)
 
 # --- ATM DERECHA ---
 with col_der:
     with st.container(border=True):
-        st.markdown("<h2 class='sub-seccion'><span class='esfera'>🔹</span>Estudio ATM Derecha</h2>", unsafe_allow_html=True)
-        st.subheader("Cóndilo Mandibular Derecho")
-        morfologia_der = st.selectbox("Morfología cabeza condilar (D):", opts_morfologia, index=0, key="m_der")
-        cartilago_der = st.selectbox("Cartílago articular (D):", opts_cartilago, index=0, key="ca_der")
+        st.markdown("<h2 class='sub-seccion'><span class='esfera'>🔹</span>ATM Derecha</h2>", unsafe_allow_html=True)
+        condilo_der = st.selectbox("Cóndilo mandibular (D):", opts_condilo, index=0, key="m_der")
         espacio_der = st.selectbox("Espacio articular (D):", opts_espacio, index=0, key="es_der")
+        derrame_der = st.selectbox("Derrame articular (D):", opts_derrame, index=0, key="der_der")
         
-        st.markdown("<p class='titulo-medidas'>Medidas (mm):</p>", unsafe_allow_html=True)
+        st.markdown("<p class='titulo-medidas'>Medidas condilares (mm):</p>", unsafe_allow_html=True)
         res_micro_der = componente_microfono_visible("der")
         if res_micro_der: st.session_state.dictado_der = res_micro_der
             
         m1, m2, m3 = st.columns(3)
-        with m1: manual_as_der = st.text_input("Anterosuperior (D)", value="", key="man_as_der")
+        with m1: manual_as_der = st.text_input("Anterior (D)", value="", key="man_as_der")
         with m2: manual_lat_der = st.text_input("Lateral (D)", value="", key="man_lat_der")
-        with m3: manual_pi_der = st.text_input("Posteroinferior (D)", value="", key="man_pi_der")
+        with m3: manual_pi_der = st.text_input("Posterior (D)", value="", key="man_pi_der")
         
         med_as_der, med_lat_der, med_pi_der = procesar_medidas_sistema(st.session_state.dictado_der, manual_as_der, manual_lat_der, manual_pi_der)
         res_der = calcular_posicion_condilo(med_as_der, med_pi_der)
-        st.markdown(f"<div class='resultado-calculo'><strong>🧮 Índice de Pullinger (D):</strong> {res_der}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='resultado-calculo'><strong>🧮 Posición condilar (Pullinger) (D):</strong> {res_der}</div>", unsafe_allow_html=True)
         
-        st.subheader("Disco Articular Derecho")
-        ecoestructura_der = st.selectbox("Ecoestructura (D):", opts_ecoestructura, index=0, key="eco_der")
-        situacion_der = st.selectbox("Situación (D):", opts_situacion, index=0, key="sit_der")
-        relacion_der = st.selectbox("Relación cóndilo-cavidad glenoidea (D):", opts_relacion, index=0, key="rel_der")
+        relacion_der = st.selectbox("Relación cóndilo-fosa glenoidea (D):", opts_relacion, index=0, key="rel_der")
+        disco_der = st.selectbox("Disco articular (D):", opts_disco, index=0, key="disco_der")
+        hora_cerrada_der = st.selectbox("Situación en hora (D)", opts_horas, index=0, key="h_c_der")
         
-        st.markdown("<b>Posición con Boca Cerrada (D):</b>", unsafe_allow_html=True)
-        hora_cerrada_der = st.selectbox("En hora (D)", opts_horas, index=0, key="h_c_der")
-        cerrada_txt_der = st.selectbox("Estado Cerrada (D):", opts_boca_cerrada, index=0, key="c_txt_der")
-        
-        st.subheader("Estudio Dinámico Derecho")
+        st.subheader("Estudio dinámico (D)")
+        cerrada_txt_der = st.selectbox("Boca cerrada (D):", opts_boca_cerrada, index=0, key="c_txt_der")
         open_txt_der = st.selectbox("Boca abierta (D):", opts_boca_abierta, index=0, key="a_txt_der")
-        repo_forma_der = st.selectbox("Forma de producirse (D):", opts_repo_forma, index=0, key="rf_der")
-        repo_tipo_der = st.selectbox("Tipo de reposición (D):", opts_repo_tipo, index=0, key="rt_der")
+        repo_der = st.selectbox("Reposición (D):", opts_repo, index=0, key="rt_der")
 
 # --- ATM IZQUIERDA ---
 with col_izq:
     with st.container(border=True):
-        st.markdown("<h2 class='sub-seccion'><span class='esfera'>🔹</span>Estudio ATM Izquierda</h2>", unsafe_allow_html=True)
-        st.subheader("Cóndilo Mandibular Izquierdo")
-        morfologia_izq = st.selectbox("Morfología cabeza condilar (I):", opts_morfologia, index=0, key="m_izq")
-        cartilago_izq = st.selectbox("Cartílago articular (I):", opts_cartilago, index=0, key="ca_izq")
+        st.markdown("<h2 class='sub-seccion'><span class='esfera'>🔹</span>ATM Izquierda</h2>", unsafe_allow_html=True)
+        condilo_izq = st.selectbox("Cóndilo mandibular (I):", opts_condilo, index=0, key="m_izq")
         espacio_izq = st.selectbox("Espacio articular (I):", opts_espacio, index=0, key="es_izq")
+        derrame_izq = st.selectbox("Derrame articular (I):", opts_derrame, index=0, key="der_izq")
         
-        st.markdown("<p class='titulo-medidas'>Medidas (mm):</p>", unsafe_allow_html=True)
+        st.markdown("<p class='titulo-medidas'>Medidas condilares (mm):</p>", unsafe_allow_html=True)
         res_micro_izq = componente_microfono_visible("izq")
         if res_micro_izq: st.session_state.dictado_izq = res_micro_izq
             
         m4, m5, m6 = st.columns(3)
-        with m4: manual_as_izq = st.text_input("Anterosuperior (I)", value="", key="man_as_izq")
+        with m4: manual_as_izq = st.text_input("Anterior (I)", value="", key="man_as_izq")
         with m5: manual_lat_izq = st.text_input("Lateral (I)", value="", key="man_lat_izq")
-        with m6: manual_pi_izq = st.text_input("Posteroinferior (I)", value="", key="man_pi_izq")
+        with m6: manual_pi_izq = st.text_input("Posterior (I)", value="", key="man_pi_izq")
         
         med_as_izq, med_lat_izq, med_pi_izq = procesar_medidas_sistema(st.session_state.dictado_izq, manual_as_izq, manual_lat_izq, manual_pi_izq)
         res_izq = calcular_posicion_condilo(med_as_izq, med_pi_izq)
-        st.markdown(f"<div class='resultado-calculo'><strong>🧮 Índice de Pullinger (I):</strong> {res_izq}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='resultado-calculo'><strong>🧮 Posición condilar (Pullinger) (I):</strong> {res_izq}</div>", unsafe_allow_html=True)
         
-        st.subheader("Disco Articular Izquierdo")
-        ecoestructura_izq = st.selectbox("Ecoestructura (I):", opts_ecoestructura, index=0, key="eco_izq")
-        situacion_izq = st.selectbox("Situación (I):", opts_situacion, index=0, key="sit_izq")
-        relacion_izq = st.selectbox("Relación cóndilo-cavidad glenoidea (I):", opts_relacion, index=0, key="rel_izq")
+        relacion_izq = st.selectbox("Relación cóndilo-fosa glenoidea (I):", opts_relacion, index=0, key="rel_izq")
+        disco_izq = st.selectbox("Disco articular (I):", opts_disco, index=0, key="disco_izq")
+        hora_cerrada_izq = st.selectbox("Situación en hora (I)", opts_horas, index=0, key="h_c_izq")
         
-        st.markdown("<b>Posición con Boca Cerrada (I):</b>", unsafe_allow_html=True)
-        hora_cerrada_izq = st.selectbox("En hora (I)", opts_horas, index=0, key="h_c_izq")
-        cerrada_txt_izq = st.selectbox("Estado Cerrada (I):", opts_boca_cerrada, index=0, key="c_txt_izq")
-        
-        st.subheader("Estudio Dinámico Izquierdo")
+        st.subheader("Estudio dinámico (I)")
+        cerrada_txt_izq = st.selectbox("Boca cerrada (I):", opts_boca_cerrada, index=0, key="c_txt_izq")
         open_txt_izq = st.selectbox("Boca abierta (I):", opts_boca_abierta, index=0, key="a_txt_izq")
-        repo_forma_izq = st.selectbox("Forma de producirse (I):", opts_repo_forma, index=0, key="rf_izq")
-        repo_tipo_izq = st.selectbox("Tipo de reposición (I):", opts_repo_tipo, index=0, key="rt_izq")
+        repo_izq = st.selectbox("Reposición (I):", opts_repo, index=0, key="rt_izq")
 
 st.markdown("<br><hr style='border: 1px solid #1E3A8A;'>", unsafe_allow_html=True)
-conclusion = st.text_area("📝 CONCLUSIÓN / OBSERVACIONES:", height=120)
+conclusion = st.text_area("📝 CONCLUSIÓN:", height=120)
 
 # --- EXPORTAR A WORD ---
 try:
     doc = DocxTemplate("plantilla_atm.docx")
     contexto = {
-        'nombres': nombres, 'apellidos': apellidos, 'edad': edad, 'derivado': derivado,
-        'fecha': fecha.strftime("%d/%m/%Y"), 'motivo': motivo, 'antecedentes': antecedentes, 'tratamiento_act': tratamiento_act,
-        'morfologia_der': morfologia_der, 'cartilago_der': cartilago_der, 'espacio_der': espacio_der, 
-        'med_as_der': med_as_der, 'med_lat_der': med_lat_der, 'med_pi_der': med_pi_der,
-        'ecoestructura_der': ecoestructura_der, 'situacion_der': situacion_der, 'relacion_der': relacion_der,
-        'calculo_relacion_der': res_der, 'hora_cerrada_der': hora_cerrada_der, 'cerrada_txt_der': cerrada_txt_der, 
-        'abierta_txt_der': open_txt_der, 'repo_forma_der': repo_forma_der, 'repo_tipo_der': repo_tipo_der,
+        'paciente': nombres, 'edad': edad, 'derivado': derivado,
+        'fecha': fecha.strftime("%d/%m/%Y"), 'motivo': motivo,
         
-        'morfologia_izq': morfologia_izq, 'cartilago_izq': cartilago_izq, 'espacio_izq': espacio_izq, 
+        'condilo_der': condilo_der, 'espacio_der': espacio_der, 'derrame_der': derrame_der,
+        'med_as_der': med_as_der, 'med_lat_der': med_lat_der, 'med_pi_der': med_pi_der,
+        'pullinger_der': res_der, 'relacion_der': relacion_der, 'disco_der': disco_der, 'hora_der': hora_cerrada_der,
+        'cerrada_der': cerrada_txt_der, 'abierta_der': open_txt_der, 'repo_der': repo_der,
+        
+        'condilo_izq': condilo_izq, 'espacio_izq': espacio_izq, 'derrame_izq': derrame_izq,
         'med_as_izq': med_as_izq, 'med_lat_izq': med_lat_izq, 'med_pi_izq': med_pi_izq,
-        'ecoestructura_izq': ecoestructura_izq, 'situacion_izq': situacion_izq, 'relacion_izq': relacion_izq,
-        'calculo_relacion_izq': res_izq, 'hora_cerrada_izq': hora_cerrada_izq, 'cerrada_txt_izq': cerrada_txt_izq, 
-        'abierta_txt_izq': open_txt_izq, 'repo_forma_izq': repo_forma_izq, 'repo_tipo_izq': repo_tipo_izq,
+        'pullinger_izq': res_izq, 'relacion_izq': relacion_izq, 'disco_izq': disco_izq, 'hora_izq': hora_cerrada_izq,
+        'cerrada_izq': cerrada_txt_izq, 'abierta_izq': open_txt_izq, 'repo_izq': repo_izq,
+        
         'conclusion': conclusion
     }
     
@@ -306,8 +416,8 @@ try:
     st.download_button(
         label="🚀 DESCARGAR INFORME EN WORD",
         data=bio,
-        file_name=f"Informe_ATM_{apellidos}_{nombres}.docx".replace(" ", "_"),
+        file_name=f"Informe_ATM_{nombres}.docx".replace(" ", "_"),
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
 except Exception as e:
-    st.error(f"Error al preparar el documento: {e} (Sube la plantilla correcta a la raíz)")
+    st.error(f"Error al preparar el documento: {e}")
