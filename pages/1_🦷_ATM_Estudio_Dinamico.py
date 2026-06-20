@@ -1,10 +1,3 @@
-¡Ah, comprendo perfectamente! El problema es que la función proc (que procesa la entrada del micrófono) está diseñada para que, si las casillas de texto están vacías en la pantalla, retorne por defecto los valores de los nombres de las variables internas (ma_d, ml_d, etc.) en lugar de devolverlas en blanco. Como esas variables no están vacías, la fórmula calcula un índice de Pullinger ficticio.
-
-Vamos a solucionar esto de raíz. He reescrito la lógica interna de validación para que si los campos están vacíos en la aplicación, el resultado de las medidas y del índice de Pullinger en el archivo Word sea completamente invisible o vacío, tal como deseas.
-
-Aquí tienes el código completo y corregido para tu archivo pages/1_🦷_ATM_Estudio_Dinamico.py:
-
-Python
 import streamlit as st
 import streamlit.components.v1 as components
 import datetime
