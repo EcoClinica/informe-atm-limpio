@@ -20,7 +20,6 @@ def generar_plantilla_musculos(ctx_datos):
     NEGRO = RGBColor(0, 0, 0)
     GRIS_LINEA = RGBColor(156, 163, 175)
     
-    # Título Principal en Arial
     p_titulo = doc.add_paragraph()
     p_titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_titulo.paragraph_format.space_after = Pt(12)
@@ -64,26 +63,8 @@ def generar_plantilla_musculos(ctx_datos):
     r_mot_val = p_motivo.add_run(ctx_datos.get('motivo', ''))
     r_mot_val.font.name = 'Arial'
     
-    # --- VALORES DE REFERENCIA EN EL WORD ---
-    p_ref = doc.add_paragraph()
-    p_ref.paragraph_format.space_before = Pt(6)
-    r_ref_tit = p_ref.add_run("Valores de Referencia Normales (Espesor promedio):\n")
-    r_ref_tit.bold = True
-    r_ref_tit.font.name = 'Arial'
-    r_ref_tit.font.size = Pt(9.5)
-    r_ref_tit.font.color.rgb = AZUL_CLINICA
-    
-    r_ref_txt = p_ref.add_run(
-        f"· Sexo del Paciente evaluado: {ctx_datos.get('sexo', 'No especificado')}\n"
-        "· Masetero - Varones: Reposo ~10-12 mm / Contracción ~13-15 mm  |  Mujeres: Reposo ~8-10 mm / Contracción ~10-12 mm\n"
-        "· Temporal - Varones: Reposo ~4.5-5.5 mm / Contracción ~6.0-7.0 mm  |  Mujeres: Reposo ~3.8-4.8 mm / Contracción ~5.0-6.0 mm"
-    )
-    r_ref_txt.font.name = 'Arial'
-    r_ref_txt.font.size = Pt(9)
-    r_ref_txt.italic = True
-    
     p_linea_desc = doc.add_paragraph()
-    p_linea_desc.paragraph_format.space_before = Pt(4)
+    p_linea_desc.paragraph_format.space_before = Pt(6)
     p_linea_desc.paragraph_format.space_after = Pt(12)
     r_ldesc = p_linea_desc.add_run("--------------------------------------------------------------------------------")
     r_ldesc.font.name = 'Arial'
@@ -97,7 +78,7 @@ def generar_plantilla_musculos(ctx_datos):
     r_est.font.size = Pt(12)
     r_est.font.color.rgb = AZUL_CLINICA
     
-    def agregar_bloque_musculo(nombre_musculo, prefijo):
+    def agregar_bloque_musculo(nombre_musculo, prefijo, ref_txt):
         p_sub = doc.add_paragraph()
         p_sub.paragraph_format.space_before = Pt(12)
         r_sub = p_sub.add_run(f"MÚSCULO {nombre_musculo.upper()}")
@@ -109,7 +90,14 @@ def generar_plantilla_musculos(ctx_datos):
         p_campos = doc.add_paragraph()
         p_campos.paragraph_format.space_after = Pt(4)
         
-        # 1. MEDIDAS PRIMERO (Cambio solicitado)
+        # 1. VALORES DE REFERENCIA DEL MÚSCULO EN EL WORD
+        r_ref_tit = p_campos.add_run(f"Valores Ref. ({ref_txt}) | Fuente: Ultrasonography in TMD\n")
+        r_ref_tit.font.name = 'Arial'
+        r_ref_tit.font.size = Pt(8.5)
+        r_ref_tit.italic = True
+        r_ref_tit.font.color.rgb = RGBColor(107, 114, 128)
+        
+        # 2. MEDIDAS
         r_tit_med = p_campos.add_run("Espesor y Dinámica Muscular:\n")
         r_tit_med.bold = True
         r_tit_med.font.name = 'Arial'
@@ -126,7 +114,7 @@ def generar_plantilla_musculos(ctx_datos):
         r_i_val = p_campos.add_run(f"Reposo: {ctx_datos.get(f'rep_i_{prefijo}', '')} mm | Contracción: {ctx_datos.get(f'con_i_{prefijo}', '')} mm | Engrosamiento: {ctx_datos.get(f'pct_i_{prefijo}', '')}\n\n")
         r_i_val.font.name = 'Arial'
         
-        # 2. ECOESTRUCTURA, SIMETRÍA Y HALLAZGOS DESPUÉS
+        # 3. ECOESTRUCTURA, SIMETRÍA Y HALLAZGOS DESPUÉS
         def add_campo_linea(parrafo, etiqueta, valor):
             r_etiq = parrafo.add_run(etiqueta)
             r_etiq.bold = True
@@ -138,8 +126,8 @@ def generar_plantilla_musculos(ctx_datos):
         add_campo_linea(p_campos, "Simetría comparativa: ", ctx_datos.get(f'simetria_{prefijo}', ''))
         add_campo_linea(p_campos, "Hallazgos / Fasciculaciones: ", ctx_datos.get(f'hallazgos_{prefijo}', ''))
 
-    agregar_bloque_musculo("Masetero", "mas")
-    agregar_bloque_musculo("Temporal", "tem")
+    agregar_bloque_musculo("Masetero", "mas", "Mujeres: R 8-10mm, C 10-12mm | Varones: R 10-12mm, C 13-15mm")
+    agregar_bloque_musculo("Temporal", "tem", "Mujeres: R 3.8-4.8mm, C 5-6mm | Varones: R 4.5-5.5mm, C 6-7mm")
     
     p_linea2 = doc.add_paragraph()
     p_linea2.paragraph_format.space_before = Pt(12)
@@ -165,7 +153,7 @@ st.markdown("""
     .sub-seccion { color: #0284C7; border-bottom: 2px solid #0284C7; padding-bottom: 5px; margin-bottom: 15px; font-size: 20px; }
     .titulo-medidas { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #1E3A8A !important; }
     .resultado-calculo { background-color: #F0FDF4; padding: 10px; border-radius: 5px; border-left: 4px solid #22C55E; margin-top: 5px; margin-bottom: 10px; font-size: 13px; color: #166534 !important; font-weight: bold; }
-    .tabla-referencia { background-color: #F8FAFC; padding: 12px; border-radius: 6px; border: 1px solid #E2E8F0; margin-bottom: 15px; font-size: 12px; }
+    .micro-referencia { color: #475569; font-size: 12px; margin-top: -8px; margin-bottom: 12px; font-style: italic; background-color: #F8FAFC; padding: 6px; border-radius: 4px; border: 1px solid #E2E8F0;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -185,15 +173,6 @@ with st.container(border=True):
         derivado = st.text_input("Derivado por:")
 
 motivo = st.text_input("Motivo de consulta:")
-
-# --- PANEL DE VALORES DE REFERENCIA EN LA APP ---
-st.markdown("""
-<div class='tabla-referencia'>
-    <strong>📊 Valores de Referencia Clínicos (Espesor Normal Promedio):</strong><br>
-    • <strong>Músculo Masetero:</strong> Mujeres: Reposo 8.0 - 10.0 mm / Contracción 10.0 - 12.0 mm | Varones: Reposo 10.0 - 12.0 mm / Contracción 13.0 - 15.0 mm<br>
-    • <strong>Músculo Temporal:</strong> Mujeres: Reposo 3.8 - 4.8 mm / Contracción 5.0 - 6.0 mm | Varones: Reposo 4.5 - 5.5 mm / Contracción 6.0 - 7.0 mm
-</div>
-""", unsafe_allow_html=True)
 
 opts_ecoestructura = ["Normal, patrón fibrilar conservado", "Hiperecoicidad difusa (Fibrosis/Sobrecarga)", "Pérdida del patrón fibrilar", "Zonas de atrofia muscular"]
 opts_simetria = ["Simétrico bilateralmente", "Asimetría por hipertrofia derecha", "Asimetría por hipertrofia izquierda", "Atrofia unilateral"]
@@ -220,7 +199,16 @@ with col_mas:
     with st.container(border=True):
         st.markdown("<h2 class='sub-seccion'>💪 Músculo Masetero</h2>", unsafe_allow_html=True)
         
-        # Medidas primero en UI
+        # Referencias abreviadas aquí dentro
+        st.markdown("""
+        <div class='micro-referencia'>
+            <strong>📊 Valores Ref. Normales:</strong><br>
+            • 🚺 <strong>Mujeres:</strong> R: 8.0-10.0 mm | C: 10.0-12.0 mm<br>
+            • 🚹 <strong>Varones:</strong> R: 10.0-12.0 mm | C: 13.0-15.0 mm<br>
+            <span style='font-size: 10px; color: #94A3B8;'>Fuente: Manfredini et al., Ultrasonography in TMD Diagnosis.</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
         st.markdown("<p class='titulo-medidas'>Espesor Lado Derecho (mm):</p>", unsafe_allow_html=True)
         md1, md2 = st.columns(2)
         with md1: rep_d_mas = st.text_input("Reposo (D)", value="", key="rd_mas")
@@ -244,7 +232,16 @@ with col_tem:
     with st.container(border=True):
         st.markdown("<h2 class='sub-seccion'>💪 Músculo Temporal</h2>", unsafe_allow_html=True)
         
-        # Medidas primero en UI
+        # Referencias abreviadas aquí dentro
+        st.markdown("""
+        <div class='micro-referencia'>
+            <strong>📊 Valores Ref. Normales:</strong><br>
+            • 🚺 <strong>Mujeres:</strong> R: 3.8-4.8 mm | C: 5.0-6.0 mm<br>
+            • 🚹 <strong>Varones:</strong> R: 4.5-5.5 mm | C: 6.0-7.0 mm<br>
+            <span style='font-size: 10px; color: #94A3B8;'>Fuente: Diagnostic Criteria for TMD (DC/TMD) / Ultrasonography protocols.</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
         st.markdown("<p class='titulo-medidas'>Espesor Lado Derecho (mm):</p>", unsafe_allow_html=True)
         td1, td2 = st.columns(2)
         with td1: rep_d_tem = st.text_input("Reposo (D)", value="", key="rd_tem")
